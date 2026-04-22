@@ -1,0 +1,226 @@
+/* ── Fonts ───────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@import "tailwindcss";
+
+/* ── Design Tokens ────────────────────────────────────────────────────────── */
+:root {
+  /* ── Light mode ─────────────────────────────────────────── */
+  --bg:              #F8FAFC;
+  --bg-subtle:       #F1F5F9;
+  --card:            #FFFFFF;
+  --card-border:     #E2E8F0;
+  --card-shadow:     0 2px 12px 0 rgba(16,30,54,0.07);
+  --border:          #E5EAF2;
+  --divider:         #E5EAF2;
+
+  --accent:          #6366F1;
+  --accent-muted:    #EEF2FF;
+  --accent-text:     #4F46E5;
+
+  --success:         #16A34A;
+  --success-bg:      #DCFCE7;
+  --warning:         #D97706;
+  --warning-bg:      #FEF3C7;
+  --danger:          #DC2626;
+  --danger-bg:       #FEE2E2;
+  --violet:          #7C3AED;
+  --violet-bg:       #EDE9FE;
+  --blue:            #2563EB;
+  --blue-bg:         #DBEAFE;
+
+  --text:            #1E293B;
+  --text-muted:      #475569;
+  --text-sub:        #94A3B8;
+
+  --input-bg:        #F8FAFC;
+  --input-border:    #CBD5E1;
+  --input-text:      #1E293B;
+  --input-placeholder: #94A3B8;
+
+  --header-bg:       rgba(248,250,252,0.85);
+  --table-head-bg:   #F8FAFC;
+  --table-row-hover: #F1F5F9;
+  --table-divider:   #E2E8F0;
+
+  --scrollbar:       #CBD5E1;
+}
+
+html.dark {
+  /* ── Dark mode ──────────────────────────────────────────── */
+  --bg:              #0B0F1A;
+  --bg-subtle:       #0F1420;
+  --card:            #111827;
+  --card-border:     #1F2937;
+  --card-shadow:     0 2px 16px 0 rgba(0,0,0,0.4);
+  --border:          #1F2937;
+  --divider:         #1F2937;
+
+  --accent:          #6366F1;
+  --accent-muted:    rgba(99,102,241,0.12);
+  --accent-text:     #818CF8;
+
+  --success:         #34D399;
+  --success-bg:      rgba(52,211,153,0.12);
+  --warning:         #FBBF24;
+  --warning-bg:      rgba(251,191,36,0.12);
+  --danger:          #F87171;
+  --danger-bg:       rgba(248,113,113,0.12);
+  --violet:          #A78BFA;
+  --violet-bg:       rgba(167,139,250,0.12);
+  --blue:            #60A5FA;
+  --blue-bg:         rgba(96,165,250,0.12);
+
+  --text:            #F9FAFB;
+  --text-muted:      #D1D5DB;
+  --text-sub:        #6B7280;
+
+  --input-bg:        #0B0F1A;
+  --input-border:    #1F2937;
+  --input-text:      #F9FAFB;
+  --input-placeholder: #4B5563;
+
+  --header-bg:       rgba(11,15,26,0.85);
+  --table-head-bg:   #0F1623;
+  --table-row-hover: rgba(31,41,55,0.4);
+  --table-divider:   #1F2937;
+
+  --scrollbar:       #374151;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  font-family: 'Inter', system-ui, sans-serif;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Semantic utility classes ─────────────────────────────────────────────── */
+
+/* Surfaces */
+.bg-app         { background-color: var(--bg); }
+.bg-card        { background-color: var(--card); }
+.bg-subtle      { background-color: var(--bg-subtle); }
+.border-token   { border-color: var(--card-border); }
+
+/* Typography */
+.text-main      { color: var(--text); }
+.text-muted     { color: var(--text-muted); }
+.text-sub       { color: var(--text-sub); }
+.text-accent    { color: var(--accent-text); }
+
+/* Inputs */
+.input-token {
+  background-color: var(--input-bg);
+  border-color:     var(--input-border);
+  color:            var(--input-text);
+  border-width: 1px;
+  border-style: solid;
+}
+.input-token::placeholder { color: var(--input-placeholder); }
+.input-token:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Card */
+.card-token {
+  background-color: var(--card);
+  border-color:     var(--card-border);
+  box-shadow:       var(--card-shadow);
+}
+
+/* Status badges — auto-adapt light/dark via CSS vars */
+.badge-processing {
+  background-color: var(--warning-bg);
+  color:            var(--warning);
+}
+.badge-packed {
+  background-color: var(--blue-bg);
+  color:            var(--blue);
+}
+.badge-dispatched {
+  background-color: var(--violet-bg);
+  color:            var(--violet);
+}
+.badge-delivered {
+  background-color: var(--success-bg);
+  color:            var(--success);
+}
+.badge-cancelled {
+  background-color: var(--danger-bg);
+  color:            var(--danger);
+}
+
+/* KPI cards */
+.kpi-value {
+  color:       var(--text);
+  font-weight: 700;
+}
+.kpi-label {
+  color:           var(--text-sub);
+  font-size:       0.7rem;
+  font-weight:     600;
+  text-transform:  uppercase;
+  letter-spacing:  .07em;
+}
+.kpi-sub {
+  color:     var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* Accent button */
+.btn-accent {
+  background-color: var(--accent);
+  color: #fff;
+  transition: opacity 0.15s;
+}
+.btn-accent:hover { opacity: 0.88; }
+
+/* Ghost button */
+.btn-ghost {
+  background-color: transparent;
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-ghost:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-sub); }
+
+/* ── Toast slide-in ───────────────────────────────────────────────────────── */
+@keyframes slide-in {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.animate-slide-in { animation: slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* ── Print ────────────────────────────────────────────────────────────────── */
+@media print {
+  nav, .no-print { display: none !important; }
+  #print-area { border: none !important; }
+}
+
+/*
+  NOTE: Do NOT add selectors with escaped Tailwind arbitrary values
+  (e.g.  html:not(.dark) .bg-\[#0B0F1A\])  — PostCSS cannot parse them.
+
+  All theme switching is handled by:
+    1. CSS variables above  (:root  /  html.dark)
+    2. Semantic classes      (card-token, input-token, btn-ghost, kpi-*, badge-*)
+    3. Inline JSX styles     style={{ color: 'var(--text)' }}
+*/
