@@ -17,8 +17,7 @@ import {
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useSalesStore, Order } from "@/lib/store";
-
+import { useSalesStore, hydrateStore } from "@/lib/store";
 import type { Order, FilterPreset } from "@/lib/store";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────

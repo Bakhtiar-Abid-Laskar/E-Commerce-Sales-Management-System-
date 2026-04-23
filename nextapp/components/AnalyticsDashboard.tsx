@@ -117,7 +117,7 @@ const SectionTitle = ({ title, sub }: { title: string; sub?: string }) => (
 
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 
-export default function AnalyticsDashboard({ open, onClose, orders }: AnalyticsProps) {
+export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: AnalyticsProps) {
   const [range, setRange] = useState<DateRange>("30D");
   const [compare, setCompare] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
