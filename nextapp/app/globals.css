@@ -40,6 +40,7 @@
 
   --header-bg:       rgba(248,250,252,0.85);
   --table-head-bg:   #F8FAFC;
+  --table-row-even:  #F9FAFB;
   --table-row-hover: #F1F5F9;
   --table-divider:   #E2E8F0;
 
@@ -82,6 +83,7 @@ html.dark {
 
   --header-bg:       rgba(11,15,26,0.85);
   --table-head-bg:   #0F1623;
+  --table-row-even:  #0D1117;
   --table-row-hover: rgba(31,41,55,0.4);
   --table-divider:   #1F2937;
 
@@ -108,6 +110,10 @@ body {
 .bg-card        { background-color: var(--card); }
 .bg-subtle      { background-color: var(--bg-subtle); }
 .border-token   { border-color: var(--card-border); }
+
+/* Table rows */
+.bg-table-row-even    { background-color: var(--table-row-even); }
+.bg-table-row-hover   { background-color: var(--table-row-hover); }
 
 /* Typography */
 .text-main      { color: var(--text); }
@@ -157,6 +163,11 @@ body {
   background-color: var(--danger-bg);
   color:            var(--danger);
 }
+
+/* Additional utility colors */
+.bg-accent-muted { background-color: var(--accent-muted); }
+.text-accent     { color: var(--accent-text); }
+.text-danger     { color: var(--danger); }
 
 /* KPI cards */
 .kpi-value {

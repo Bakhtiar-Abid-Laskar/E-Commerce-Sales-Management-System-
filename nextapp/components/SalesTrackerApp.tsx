@@ -863,51 +863,51 @@ function FilterBar({ filters, setFilters, presets, onSavePreset, onDeletePreset,
       {presets.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {presets.map((p) => (
-            <div key={p.name} className="flex items-center gap-1 bg-indigo-600/10 border border-indigo-600/20 text-indigo-400 rounded-full px-2.5 py-1 text-xs font-medium">
+            <div key={p.name} className="flex items-center gap-1 bg-accent-muted border border-accent/20 text-accent rounded-full px-2.5 py-1 text-xs font-medium">
               <button onClick={() => onApplyPreset(p)}>{p.name}</button>
-              <button onClick={() => onDeletePreset(p.name)} className="hover:text-red-400 transition-colors ml-0.5"><X size={9} /></button>
+              <button onClick={() => onDeletePreset(p.name)} className="hover:text-danger transition-colors ml-0.5"><X size={9} /></button>
             </div>
           ))}
         </div>
       )}
 
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-sm font-medium hover:text-white transition-colors" style={{color:'var(--text-muted)'}}>
         <Filter size={13} />
         Filters
-        {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+        {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
         {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
       </button>
 
       {open && (
-        <div className="mt-3 bg-[#111827] border border-[#1F2937] rounded-2xl p-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
+        <div className="mt-3 bg-card border border-token rounded-2xl p-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2.5">Status</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Status</p>
             {ORDER_STATUSES.map((s) => (
-              <label key={s} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-1.5 cursor-pointer transition-colors">
+              <label key={s} className="flex items-center gap-2 text-sm mb-1.5 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
                 <input type="checkbox" className="accent-indigo-500" checked={(filters.status || []).includes(s)} onChange={() => toggle("status", s)} /> {s}
               </label>
             ))}
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2.5">Order Type</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Order Type</p>
             {ORDER_TYPES.map((t) => (
-              <label key={t} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-1.5 cursor-pointer transition-colors">
+              <label key={t} className="flex items-center gap-2 text-sm mb-1.5 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
                 <input type="checkbox" className="accent-indigo-500" checked={(filters.orderType || []).includes(t)} onChange={() => toggle("orderType", t)} /> {t}
               </label>
             ))}
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-2.5">Courier</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mt-4 mb-2.5" style={{color:'var(--text-sub)'}}>Courier</p>
             {COURIERS.map((c) => (
-              <label key={c} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-1.5 cursor-pointer transition-colors">
+              <label key={c} className="flex items-center gap-2 text-sm mb-1.5 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
                 <input type="checkbox" className="accent-indigo-500" checked={(filters.courier || []).includes(c)} onChange={() => toggle("courier", c)} /> {c}
               </label>
             ))}
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2.5">Date Range</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Date Range</p>
             <div className="space-y-1">
               {["Today", "This Week", "This Month", "Custom"].map((r) => (
                 <button key={r} onClick={() => setFilters((p) => ({ ...p, dateRange: r === filters.dateRange ? undefined : r }))}
-                  className={`block w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${filters.dateRange === r ? "bg-indigo-600/20 text-indigo-400" : "text-gray-400 hover:bg-[#1F2937] hover:text-white"}`}>{r}</button>
+                  className={`block w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${filters.dateRange === r ? "bg-accent-muted text-accent" : "hover:bg-[#1F2937] hover:text-white"}`} style={{color:'var(--text-muted)'}}>{r}</button>
               ))}
             </div>
             {filters.dateRange === "Custom" && (
@@ -918,37 +918,37 @@ function FilterBar({ filters, setFilters, presets, onSavePreset, onDeletePreset,
             )}
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2.5">Other</p>
-            <label className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-2 cursor-pointer transition-colors">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Other</p>
+            <label className="flex items-center gap-2 text-sm mb-2 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
               <input type="checkbox" className="accent-indigo-500" checked={!!filters.overdueOnly} onChange={(e) => setFilters((p) => ({ ...p, overdueOnly: e.target.checked }))} /> Overdue Only
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-4 cursor-pointer transition-colors">
+            <label className="flex items-center gap-2 text-sm mb-4 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
               <input type="checkbox" className="accent-indigo-500" checked={!!filters.starredOnly} onChange={(e) => setFilters((p) => ({ ...p, starredOnly: e.target.checked }))} /> Starred Only
             </label>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2.5">Amount Range (₹)</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Amount Range (₹)</p>
             <div className="space-y-3">
               <div>
-                <div className="flex justify-between text-xs text-gray-600 mb-1"><span>Min</span><span className="text-indigo-400">₹{(filters.amountMin ?? 0).toLocaleString("en-IN")}</span></div>
+                <div className="flex justify-between text-xs mb-1"><span style={{color:'var(--text-sub)'}}>Min</span><span className="text-accent">₹{(filters.amountMin ?? 0).toLocaleString("en-IN")}</span></div>
                 <input type="range" min={0} max={100000} step={500} value={filters.amountMin ?? 0} onChange={(e) => setFilters((p) => ({ ...p, amountMin: Number(e.target.value) }))} className="w-full accent-indigo-500" />
               </div>
               <div>
-                <div className="flex justify-between text-xs text-gray-600 mb-1"><span>Max</span><span className="text-indigo-400">{(filters.amountMax ?? 100000) >= 100000 ? "₹1L+" : `₹${(filters.amountMax ?? 100000).toLocaleString("en-IN")}`}</span></div>
+                <div className="flex justify-between text-xs mb-1"><span style={{color:'var(--text-sub)'}}>Max</span><span className="text-accent">{(filters.amountMax ?? 100000) >= 100000 ? "₹1L+" : `₹${(filters.amountMax ?? 100000).toLocaleString("en-IN")}`}</span></div>
                 <input type="range" min={0} max={100000} step={500} value={filters.amountMax ?? 100000} onChange={(e) => setFilters((p) => ({ ...p, amountMax: Number(e.target.value) }))} className="w-full accent-indigo-500" />
               </div>
             </div>
           </div>
 
-          <div className="col-span-2 sm:col-span-4 flex items-center gap-3 pt-3 border-t border-[#1F2937]">
+          <div className="col-span-2 sm:col-span-4 flex items-center gap-3 pt-3 border-t border-token">
             {showPresetInput ? (
               <>
                 <input value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Preset name…" className={inp + " max-w-xs"} />
                 <button onClick={() => { onSavePreset(presetName); setPresetName(""); setShowPresetInput(false); }} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors">Save</button>
-                <button onClick={() => setShowPresetInput(false)} className="text-sm text-gray-500 hover:text-gray-300">Cancel</button>
+                <button onClick={() => setShowPresetInput(false)} className="text-sm hover:text-gray-300" style={{color:'var(--text-sub)'}}>Cancel</button>
               </>
             ) : (
-              <button onClick={() => setShowPresetInput(true)} className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">+ Save as preset</button>
+              <button onClick={() => setShowPresetInput(true)} className="text-sm hover:text-indigo-300 transition-colors text-accent">+ Save as preset</button>
             )}
-            <button onClick={() => setFilters({})} className="ml-auto text-sm text-gray-600 hover:text-red-400 transition-colors">Clear all</button>
+            <button onClick={() => setFilters({})} className="ml-auto text-sm hover:text-red-400 transition-colors" style={{color:'var(--text-muted)'}}>Clear all</button>
           </div>
         </div>
       )}
@@ -1174,8 +1174,8 @@ export default function SalesTrackerApp() {
   // Sort icon
   const SortIcon = ({ col }: { col: string }) => {
     const s = sortConfig.find((x) => x.col === col);
-    if (!s) return <ArrowUp size={10} className="text-gray-700" />;
-    return s.dir === "asc" ? <ArrowUp size={10} className="text-indigo-400" /> : <ArrowDown size={10} className="text-indigo-400" />;
+    if (!s) return <ArrowUp size={10} style={{color:'var(--text-sub)'}} />;
+    return s.dir === "asc" ? <ArrowUp size={10} className="text-accent" /> : <ArrowDown size={10} className="text-accent" />;
   };
 
   const activeOrder = (modal?.type === "view" || modal?.type === "edit") ? orders.find((o) => o.id === modal?.data) : null;
@@ -1318,27 +1318,27 @@ export default function SalesTrackerApp() {
 
           {/* Bulk bar */}
           {selected.size > 0 && (
-            <div className="px-6 py-3 bg-indigo-600/5 border-b border-indigo-600/20 flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-medium text-indigo-400">{selected.size} selected</span>
+            <div className="px-6 py-3 bg-accent-muted/50 border-b border-accent/20 flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-accent">{selected.size} selected</span>
               <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className={sel + " max-w-[180px] py-1.5"}>
                 <option value="">Change status…</option>
                 {ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}
               </select>
               <button onClick={applyBulkStatus} disabled={!bulkStatus} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm rounded-lg font-medium transition-colors">Apply</button>
-              <button onClick={() => exportCSV(filteredOrders.filter((o) => selected.has(o.id)))} className="px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-[#1F2937] hover:border-[#374151] rounded-lg transition-colors">Export CSV</button>
-              <button onClick={() => { selectedArr.forEach((id) => toggleStar(id)); setSelected(new Set()); }} className="px-3 py-1.5 text-sm text-gray-400 hover:text-amber-400 border border-[#1F2937] rounded-lg transition-colors">★ Star</button>
-              <button onClick={() => { if (window.confirm(`Delete ${selectedArr.length} orders?`)) { selectedArr.forEach((id) => deleteOrder(id)); setSelected(new Set()); addToast(`${selectedArr.length} deleted`, "delete"); } }} className="px-3 py-1.5 text-sm text-red-400 hover:text-red-300 border border-[#1F2937] rounded-lg transition-colors">Delete</button>
-              <button onClick={() => setSelected(new Set())} className="ml-auto text-gray-600 hover:text-gray-400"><X size={13} /></button>
+              <button onClick={() => exportCSV(filteredOrders.filter((o) => selected.has(o.id)))} className="px-3 py-1.5 text-sm hover:text-white border border-token rounded-lg transition-colors" style={{color:'var(--text-muted)'}}>Export CSV</button>
+              <button onClick={() => { selectedArr.forEach((id) => toggleStar(id)); setSelected(new Set()); }} className="px-3 py-1.5 text-sm hover:text-amber-400 border border-token rounded-lg transition-colors" style={{color:'var(--text-muted)'}}>★ Star</button>
+              <button onClick={() => { if (window.confirm(`Delete ${selectedArr.length} orders?`)) { selectedArr.forEach((id) => deleteOrder(id)); setSelected(new Set()); addToast(`${selectedArr.length} deleted`, "delete"); } }} className="px-3 py-1.5 text-sm hover:text-red-300 border border-token rounded-lg transition-colors" style={{color:'var(--danger)'}}>Delete</button>
+              <button onClick={() => setSelected(new Set())} className="ml-auto" style={{color:'var(--text-muted)'}}><X size={13} /></button>
             </div>
           )}
 
           {/* ── MOBILE CARDS ───────────────────────────────────────────────── */}
           <div className="block md:hidden px-4 pb-4 space-y-3">
             {filteredOrders.length === 0 ? (
-              <div className="rounded-2xl border border-[#1F2937] bg-[#111827] p-8 text-center">
-                <Package className="mx-auto mb-3 text-gray-700" size={36} />
-                <p className="text-gray-400 font-medium mb-1">No orders found</p>
-                <p className="text-sm text-gray-600">
+              <div className="rounded-2xl border border-token bg-card p-8 text-center">
+                <Package className="mx-auto mb-3" size={36} style={{color:'var(--text-sub)'}} />
+                <p className="text-gray-400 font-medium mb-1" style={{color:'var(--text-muted)'}}>No orders found</p>
+                <p className="text-sm" style={{color:'var(--text-sub)'}}>
                   {searchQ ? `No results for "${searchQ}"` : "Upload your first PDF to get started 🚀"}
                 </p>
               </div>
@@ -1348,7 +1348,7 @@ export default function SalesTrackerApp() {
               return (
                 <article
                   key={o.id}
-                  className={`rounded-2xl border p-4 shadow-sm ${overdue ? "border-red-500/20 bg-red-500/5" : "border-[#1F2937] bg-[#111827]"}`}
+                  className={`rounded-2xl border p-4 shadow-sm ${overdue ? "border-red-500/20 bg-red-500/5" : "border-token bg-card"}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
@@ -1363,15 +1363,16 @@ export default function SalesTrackerApp() {
                         }}
                       />
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-500">Order ID</p>
-                        <p className="mt-0.5 font-mono text-sm font-semibold text-gray-100 truncate">{o.orderNumber}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{color:'var(--text-sub)'}}>Order ID</p>
+                        <p className="mt-0.5 font-mono text-sm font-semibold truncate" style={{color:'var(--text)'}}>{o.orderNumber}</p>
                       </div>
                     </div>
 
                     <button
                       onClick={() => setMobileMenuId(isMenuOpen ? null : o.id)}
-                      className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#1F2937] transition-colors"
+                      className="p-2 rounded-lg hover:bg-[#1F2937] transition-colors"
                       aria-label="Order actions"
+                      style={{color:'var(--text-muted)'}}
                     >
                       <MoreHorizontal size={16} />
                     </button>
@@ -1379,10 +1380,10 @@ export default function SalesTrackerApp() {
 
                   <div className="mt-4 flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-base font-semibold text-white truncate">{o.customerName}</p>
-                      {o.customerPhone && <p className="text-xs text-gray-500 mt-0.5">{o.customerPhone}</p>}
+                      <p className="text-base font-semibold truncate" style={{color:'var(--text)'}}>{o.customerName}</p>
+                      {o.customerPhone && <p className="text-xs mt-0.5" style={{color:'var(--text-muted)'}}>{o.customerPhone}</p>}
                     </div>
-                    <p className="text-xl font-black text-white whitespace-nowrap">{fmtCurrency(o.amount)}</p>
+                    <p className="text-xl font-black whitespace-nowrap" style={{color:'var(--text)'}}>{fmtCurrency(o.amount)}</p>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1393,28 +1394,28 @@ export default function SalesTrackerApp() {
 
                   <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                     <div>
-                      <p className="text-gray-500 mb-0.5">Date</p>
-                      <p className="text-gray-200 font-medium">{fmtDate(o.date)}</p>
+                      <p className="mb-0.5" style={{color:'var(--text-sub)'}}>Date</p>
+                      <p className="font-medium" style={{color:'var(--text)'}}>{fmtDate(o.date)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 mb-0.5">Product</p>
-                      <p className="text-gray-200 font-medium truncate" title={o.productName}>{o.productName}</p>
+                      <p className="mb-0.5" style={{color:'var(--text-sub)'}}>Product</p>
+                      <p className="font-medium truncate" title={o.productName} style={{color:'var(--text)'}}>{o.productName}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 mb-0.5">SKU</p>
-                      <p className="text-gray-200 font-mono truncate">{o.sku}</p>
+                      <p className="mb-0.5" style={{color:'var(--text-sub)'}}>SKU</p>
+                      <p className="font-mono truncate" style={{color:'var(--text)'}}>{o.sku}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 mb-0.5">Customer</p>
-                      <p className="text-gray-200 font-medium truncate">{o.customerName}</p>
+                      <p className="mb-0.5" style={{color:'var(--text-sub)'}}>Customer</p>
+                      <p className="font-medium truncate" style={{color:'var(--text)'}}>{o.customerName}</p>
                     </div>
                   </div>
 
                   {isMenuOpen && (
-                    <div className="mt-4 overflow-hidden rounded-xl border border-[#1F2937] bg-[#0B0F1A]">
-                      <button onClick={() => { setModal({ type: "view", data: o.id }); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm text-gray-300 hover:bg-[#1F2937] transition-colors">View</button>
-                      <button onClick={() => { setModal({ type: "edit", data: o.id }); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm text-gray-300 hover:bg-[#1F2937] transition-colors border-t border-[#1F2937]">Edit</button>
-                      <button onClick={() => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors border-t border-[#1F2937]">Delete</button>
+                    <div className="mt-4 overflow-hidden rounded-xl border border-token bg-app">
+                      <button onClick={() => { setModal({ type: "view", data: o.id }); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm transition-colors hover:bg-[#1F2937]" style={{color:'var(--text)'}}>View</button>
+                      <button onClick={() => { setModal({ type: "edit", data: o.id }); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm transition-colors hover:bg-[#1F2937] border-t border-token" style={{color:'var(--text)'}}>Edit</button>
+                      <button onClick={() => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm hover:bg-red-500/10 transition-colors border-t border-token" style={{color:'var(--danger)'}}>Delete</button>
                     </div>
                   )}
                 </article>
@@ -1434,21 +1435,21 @@ export default function SalesTrackerApp() {
                   <th className="px-2 py-3 w-5" />
                   {[ ["date","Date"],["orderNumber","Order ID"],["customerName","Customer"],["productName","Product"],["sku","SKU"],["amount","Amount"],["status","Status"]].map(([col, label]) => (
                     <th key={col} onClick={(e) => handleSort(col, e.shiftKey)}
-                      className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer whitespace-nowrap select-none transition-colors hover:text-indigo-500"
-                      style={{color:'var(--text-sub)'}}>
+                      className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer whitespace-nowrap select-none transition-colors hover:text-accent"
+                      style={{color:'var(--text-muted)'}}>
                       <div className="flex items-center gap-1">{label}<SortIcon col={col} /></div>
                     </th>
                   ))}
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{color:'var(--text-sub)'}}>Actions</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{color:'var(--text-muted)'}}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="py-20 text-center">
-                      <Package className="mx-auto mb-4 text-gray-700" size={40} />
-                      <p className="text-gray-400 font-medium mb-1">No orders found</p>
-                      <p className="text-sm text-gray-600">
+                      <Package className="mx-auto mb-4" size={40} style={{color:'var(--text-sub)'}} />
+                      <p className="text-gray-400 font-medium mb-1" style={{color:'var(--text-muted)'}}>No orders found</p>
+                      <p className="text-sm" style={{color:'var(--text-sub)'}}>
                         {searchQ ? `No results for "${searchQ}"` : "Upload your first PDF to get started 🚀"}
                       </p>
                     </td>
@@ -1457,8 +1458,8 @@ export default function SalesTrackerApp() {
                   const overdue = isOverdue(o);
                   return (
                     <tr key={o.id}
-                      className={`group transition-colors even:bg-[#F9FAFB] hover:bg-gray-50 ${overdue ? "bg-red-50" : ""}`}
-                      style={{ borderBottom: '1px solid #E5E7EB' }}
+                      className={`group transition-colors even:bg-table-row-even hover:bg-table-row-hover ${overdue ? "bg-red-500/10" : ""}`}
+                      style={{ borderBottom: '1px solid var(--table-divider)' }}
                       onDoubleClick={() => setModal({ type: "view", data: o.id })}
                     >
                       <td className="px-4 py-3.5">
@@ -1466,28 +1467,28 @@ export default function SalesTrackerApp() {
                           onChange={(e) => { const n = new Set(selected); e.target.checked ? n.add(o.id) : n.delete(o.id); setSelected(n); }} />
                       </td>
                       <td className="px-2 py-3.5 text-center">
-                        {o.starred ? <Star size={12} className="text-amber-400 fill-amber-400" /> : overdue ? <AlertTriangle size={12} className="text-red-500" /> : null}
+                        {o.starred ? <Star size={12} className="text-amber-400 fill-amber-400" /> : overdue ? <AlertTriangle size={12} className="text-red-400" /> : null}
                       </td>
-                      <td className="px-3 py-3.5 text-gray-500 text-xs whitespace-nowrap">{fmtDate(o.date)}</td>
+                      <td className="px-3 py-3.5 text-xs whitespace-nowrap" style={{color:'var(--text-muted)'}}>{fmtDate(o.date)}</td>
                       <td className="px-3 py-3.5">
-                        <span className="font-mono text-xs font-medium text-gray-700 hover:text-indigo-600 transition-colors cursor-pointer" onClick={() => setModal({ type: "view", data: o.id })}>{o.orderNumber}</span>
+                        <span className="font-mono text-xs font-medium transition-colors cursor-pointer hover:text-accent" style={{color:'var(--text)'}} onClick={() => setModal({ type: "view", data: o.id })}>{o.orderNumber}</span>
                       </td>
                       <td className="px-3 py-3.5 whitespace-nowrap">
-                        <p className="text-sm font-semibold text-gray-900">{o.customerName}</p>
-                        {o.customerPhone && <p className="text-xs text-gray-500">{o.customerPhone}</p>}
+                        <p className="text-sm font-semibold" style={{color:'var(--text)'}}>{o.customerName}</p>
+                        {o.customerPhone && <p className="text-xs" style={{color:'var(--text-muted)'}}>{o.customerPhone}</p>}
                       </td>
                       <td className="px-3 py-3.5 max-w-[160px]">
-                        <p className="text-xs text-gray-600 truncate" title={o.productName}>{o.productName}</p>
+                        <p className="text-xs truncate" style={{color:'var(--text-muted)'}} title={o.productName}>{o.productName}</p>
                       </td>
-                      <td className="px-3 py-3.5 font-mono text-xs text-gray-500 whitespace-nowrap">{o.sku}</td>
-                      <td className="px-3 py-3.5 font-semibold text-gray-900 whitespace-nowrap text-sm">{fmtCurrency(o.amount)}</td>
+                      <td className="px-3 py-3.5 font-mono text-xs whitespace-nowrap" style={{color:'var(--text-muted)'}}>{o.sku}</td>
+                      <td className="px-3 py-3.5 font-semibold whitespace-nowrap text-sm" style={{color:'var(--text)'}}>{fmtCurrency(o.amount)}</td>
                       <td className="px-3 py-3.5"><StatusBadge status={o.status} /></td>
                       <td className="px-3 py-3.5">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <button onClick={() => setModal({ type: "view", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="View"><Eye size={13} /></button>
-                          <button onClick={() => setModal({ type: "edit", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="Edit"><Edit size={13} /></button>
-                          <button onClick={() => handlePrintLabel(o)} className={`p-1.5 rounded-lg transition-colors ${o.labelBase64 ? "hover:bg-indigo-500/10 text-gray-600 hover:text-indigo-400" : "text-gray-700 opacity-50 cursor-not-allowed"}`} title={o.labelBase64 ? "Print uploaded label" : "No uploaded label"} disabled={!o.labelBase64}><Printer size={13} /></button>
-                          <button onClick={() => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); }} className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-600 hover:text-red-400 transition-colors" title="Delete"><Trash2 size={13} /></button>
+                          <button onClick={() => setModal({ type: "view", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg transition-colors" title="View" style={{color:'var(--text-muted)'}}><Eye size={13} /></button>
+                          <button onClick={() => setModal({ type: "edit", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg transition-colors" title="Edit" style={{color:'var(--text-muted)'}}><Edit size={13} /></button>
+                          <button onClick={() => handlePrintLabel(o)} className={`p-1.5 rounded-lg transition-colors ${o.labelBase64 ? "hover:bg-indigo-500/10 hover:text-accent" : "opacity-50 cursor-not-allowed"}`} title={o.labelBase64 ? "Print uploaded label" : "No uploaded label"} disabled={!o.labelBase64} style={{color:'var(--text-muted)'}}><Printer size={13} /></button>
+                          <button onClick={() => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); }} className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors" title="Delete" style={{color:'var(--text-muted)'}}><Trash2 size={13} /></button>
                         </div>
                       </td>
                     </tr>
@@ -1498,8 +1499,8 @@ export default function SalesTrackerApp() {
           </div>
 
           {/* Table footer */}
-          <div className="hidden md:flex px-6 py-3 border-t border-[#1F2937] items-center justify-between text-xs text-gray-600">
-            <span>{orders.length} total orders · Cloud persistence · <button onClick={() => setModal({ type: "shortcuts" })} className="hover:text-gray-400 underline">shortcuts</button></span>
+          <div className="hidden md:flex px-6 py-3 border-t border-token items-center justify-between text-xs" style={{color:'var(--text-muted)'}}>
+            <span>{orders.length} total orders · Cloud persistence · <button onClick={() => setModal({ type: "shortcuts" })} className="hover:text-accent underline">shortcuts</button></span>
             <span className="flex items-center gap-1.5">
               {isOnline ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Online</> : <><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Offline</>}
             </span>
