@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
   try {
     // Model is configurable via GEMINI_MODEL in .env.local
     // Run GET /api/list-models to see all models available for your API key
-    const model = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+    const model = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview";
     const geminiRes = await fetchWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
