@@ -25,6 +25,17 @@ interface GeminiErrorBody {
   };
 }
 
+interface GeminiGenerateContentResponse {
+  candidates?: Array<{
+    finishReason?: string;
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
+}
+
 // ─── Helper: Fetch with Exponential Backoff ───────────────────────────────────
 async function fetchWithRetry(
   url: string,
@@ -265,14 +276,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const geminiJson = geminiData as GeminiGenerateContentResponse;
+
     const rawText: string =
-      (geminiData as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })
-        .candidates?.[0]?.content?.parts
+      geminiJson.candidates?.[0]?.content?.parts
         ?.map((p: { text?: string }) => p.text ?? "")
         .join("") ?? "";
 
     if (!rawText) {
-      const reason = geminiData.candidates?.[0]?.finishReason;
+      const reason = geminiJson.candidates?.[0]?.finishReason;
       throw new Error(`Empty response from Gemini. Finish reason: ${reason ?? "unknown"}`);
     }
 

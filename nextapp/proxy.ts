@@ -1,9 +1,9 @@
-import { type NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { type NextRequest, NextResponse } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
+export async function proxy(request: NextRequest) {
+  const supabaseResponse = NextResponse.next({
     request,
   });
 
@@ -25,16 +25,12 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session to ensure it's valid
+  // Refresh session to ensure it is still valid.
   await supabase.auth.getSession();
 
   return supabaseResponse;
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.svg).*)',
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.svg).*)"],
 };
-
-import { NextResponse } from 'next/server';
