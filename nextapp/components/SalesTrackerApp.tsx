@@ -1346,8 +1346,6 @@ export default function SalesTrackerApp() {
                           <button onClick={() => setModal({ type: "view", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="View"><Eye size={13} /></button>
                           <button onClick={() => setModal({ type: "edit", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="Edit"><Edit size={13} /></button>
                           <button onClick={() => handlePrintLabel(o)} className={`p-1.5 rounded-lg transition-colors ${o.labelBase64 ? "hover:bg-indigo-500/10 text-gray-600 hover:text-indigo-400" : "text-gray-700 opacity-50 cursor-not-allowed"}`} title={o.labelBase64 ? "Print uploaded label" : "No uploaded label"} disabled={!o.labelBase64}><Printer size={13} /></button>
-                          <button onClick={() => setModal({ type: "invoice", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="Print Invoice"><FileText size={13} /></button>
-                          <button onClick={() => setModal({ type: "slip", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="Packing Slip"><Package size={13} /></button>
                           <button onClick={() => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); }} className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-600 hover:text-red-400 transition-colors" title="Delete"><Trash2 size={13} /></button>
                         </div>
                       </td>
@@ -1396,38 +1394,6 @@ export default function SalesTrackerApp() {
           </button>
         </div>
       </Modal>
-
-      {modal?.type === "invoice" && (() => { const o = orders.find((x) => x.id === modal.data); return o ? (
-        <Modal open onClose={() => setModal(null)} title="Print Invoice" size="max-w-2xl">
-          <div id="print-area" className="bg-white text-gray-900 p-8 rounded-xl border border-gray-100">
-            <div className="flex justify-between items-start border-b border-gray-100 pb-6 mb-6">
-              <div><div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center mb-3"><Package className="text-white" size={18} /></div><h1 className="text-2xl font-black">INVOICE</h1><p className="text-gray-400 text-sm">#{o.invoiceNumber}</p></div>
-              <div className="text-right text-sm"><p className="font-semibold">Order Date: {fmtDate(o.date)}</p><p className="text-gray-500">{o.orderNumber}</p></div>
-            </div>
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              <div><p className="text-xs font-bold text-gray-400 uppercase mb-2">Bill To</p><p className="font-bold">{o.customerName}</p><p className="text-gray-500 text-sm">{o.deliveryAddress}, {o.pincode}</p></div>
-              <div><p className="text-xs font-bold text-gray-400 uppercase mb-2">Shipping</p><p className="font-bold">{o.courierPartner}</p><p className="text-gray-500 text-sm">AWB: {o.courierAWB}</p></div>
-            </div>
-            <table className="w-full text-sm border-collapse mb-8">
-              <thead><tr className="bg-gray-50"><th className="text-left p-3 border border-gray-100">Product</th><th className="text-left p-3 border border-gray-100">SKU</th><th className="text-right p-3 border border-gray-100">Amount</th></tr></thead>
-              <tbody><tr><td className="p-3 border border-gray-100">{o.productName}</td><td className="p-3 border border-gray-100 font-mono text-xs">{o.sku}</td><td className="p-3 border border-gray-100 text-right font-bold">{fmtCurrency(o.amount)}</td></tr></tbody>
-              <tfoot><tr><td colSpan={2} className="p-3 border border-gray-100 font-bold">Total</td><td className="p-3 border border-gray-100 text-right font-black text-lg">{fmtCurrency(o.amount)}</td></tr></tfoot>
-            </table>
-          </div>
-          <button onClick={() => window.print()} className="mt-4 w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"><Printer size={15} /> Print</button>
-        </Modal>
-      ) : null; })()}
-
-      {modal?.type === "slip" && (() => { const o = orders.find((x) => x.id === modal.data); return o ? (
-        <Modal open onClose={() => setModal(null)} title="Packing Slip" size="max-w-sm">
-          <div className="border border-[#1F2937] rounded-xl p-5 space-y-3 text-sm">
-            {[["Order No.", o.orderNumber], ["Customer", o.customerName], ["Product", o.productName], ["SKU", o.sku], ["AWB", o.courierAWB], ["Courier", o.courierPartner], ["Address", `${o.deliveryAddress}, ${o.pincode}`]].map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-4"><span className="text-gray-500 flex-shrink-0">{k}</span><span className="text-gray-200 font-medium text-right">{v}</span></div>
-            ))}
-          </div>
-          <button onClick={() => window.print()} className="mt-4 w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"><Printer size={15} /> Print</button>
-        </Modal>
-      ) : null; })()}
 
       {modal?.type === "shortcuts" && (
         <Modal open onClose={() => setModal(null)} title="Keyboard Shortcuts" size="max-w-sm">
