@@ -17,6 +17,14 @@ interface ParsedLabel {
   expectedDeliveryDate: string | null;
 }
 
+interface GeminiErrorBody {
+  error?: {
+    code?: number;
+    message?: string;
+    status?: string;
+  };
+}
+
 // ─── Helper: Fetch with Exponential Backoff ───────────────────────────────────
 async function fetchWithRetry(
   url: string,
@@ -131,6 +139,10 @@ expectedDeliveryDate:
 Return null for any field that is genuinely not present on the label.
 Do NOT guess or fabricate values. Only extract what is explicitly visible.`;
 
+function uniqueModels(models: string[]): string[] {
+  return [...new Set(models.map((m) => m.trim()).filter(Boolean))];
+}
+
 // ─── POST /api/parse-label ────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   // ─── Require authentication ────────────────────────────────────────────────────
@@ -170,43 +182,92 @@ export async function POST(req: NextRequest) {
   try {
     // Model is configurable via GEMINI_MODEL in .env.local
     // Run GET /api/list-models to see all models available for your API key
-    const model = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview";
-    const geminiRes = await fetchWithRetry(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { inline_data: { mime_type: resolvedMime, data: base64 } },
-                { text: EXTRACTION_PROMPT },
-              ],
-            },
+    const configuredModel = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview";
+    const modelCandidates = uniqueModels([
+      configuredModel,
+      "gemini-3.1-flash-lite-preview",
+      "gemini-2.0-flash",
+    ]);
+
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            { inline_data: { mime_type: resolvedMime, data: base64 } },
+            { text: EXTRACTION_PROMPT },
           ],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 4096,         // 1024 was too small — long addresses truncate JSON
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-          },
-        }),
+        },
+      ],
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 4096,
+        responseMimeType: "application/json",
+        responseSchema: RESPONSE_SCHEMA,
+      },
+    };
+
+    let geminiData: unknown = null;
+    let geminiRes: Response | null = null;
+    let activeModel = configuredModel;
+
+    for (const candidateModel of modelCandidates) {
+      activeModel = candidateModel;
+      geminiRes = await fetchWithRetry(
+        `https://generativelanguage.googleapis.com/v1beta/models/${candidateModel}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      geminiData = await geminiRes.json();
+
+      if (geminiRes.ok) {
+        break;
       }
-    );
 
-    const geminiData = await geminiRes.json();
+      const errorBody = geminiData as GeminiErrorBody;
+      const statusCode = geminiRes.status;
 
-    if (!geminiRes.ok) {
-      console.error("Gemini API error:", geminiData);
+      // If quota is exhausted or model is unavailable, try the next candidate model.
+      if (statusCode === 429 || statusCode === 404) {
+        console.warn(
+          `Gemini model failed (${candidateModel}, status ${statusCode}). Trying fallback model.`
+        );
+        continue;
+      }
+
+      console.error("Gemini API error:", { model: candidateModel, ...errorBody });
       return NextResponse.json(
-        { error: geminiData.error?.message || "Gemini API error" },
-        { status: geminiRes.status }
+        {
+          error: errorBody.error?.message || "Gemini API error",
+          model: candidateModel,
+        },
+        { status: statusCode }
+      );
+    }
+
+    if (!geminiRes || !geminiRes.ok) {
+      const errorBody = geminiData as GeminiErrorBody;
+      console.error("Gemini API error after model fallbacks:", {
+        model: activeModel,
+        ...errorBody,
+      });
+      return NextResponse.json(
+        {
+          error:
+            errorBody.error?.message ||
+            "All configured Gemini models are currently unavailable or over quota",
+          model: activeModel,
+        },
+        { status: geminiRes?.status ?? 429 }
       );
     }
 
     const rawText: string =
-      geminiData.candidates?.[0]?.content?.parts
+      (geminiData as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })
+        .candidates?.[0]?.content?.parts
         ?.map((p: { text?: string }) => p.text ?? "")
         .join("") ?? "";
 
