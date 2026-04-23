@@ -13,7 +13,7 @@ export async function isUserMFAEnabled(userId: string): Promise<boolean> {
     .single();
 
   if (error) return false;
-  return data?.is_enabled ?? false;
+  return (data as any)?.is_enabled ?? false;
 }
 
 /**
@@ -31,8 +31,7 @@ export async function setupMFAWithTOTP(userId: string) {
   }
 
   // Mark MFA as setup (note: actual implementation would integrate TOTP library)
-  const { error } = await supabase
-    .from('user_mfa_settings')
+  const { error } = await (supabase.from('user_mfa_settings') as any)
     .upsert({
       user_id: userId,
       is_enabled: false, // Not fully enabled until verified
