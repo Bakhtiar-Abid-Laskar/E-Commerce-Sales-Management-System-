@@ -9,7 +9,7 @@ import {
   Edit, Trash2, ChevronDown, ChevronUp, Keyboard, 
   Printer, Clock, RefreshCw, FileText,
   WifiOff, ExternalLink, ArrowUp, ArrowDown,
-  TrendingUp, AlertCircle,
+  TrendingUp, AlertCircle, MoreHorizontal,
   RotateCcw, Home, Zap, Camera, Hash, Share2,
   MapPin, Phone, User, CreditCard, Calendar, Weight as WeightIcon,
   CheckSquare, XCircle, LogOut,
@@ -753,11 +753,11 @@ function KPICards({ orders, onFilter }: { orders: Order[]; onFilter: (f: Record<
   return (
     <div className="mb-8 space-y-6">
       {/* Top Row — Revenue (2 cols) + Orders (1 col) + Dispatch (1 col) = 4 cols */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
         {/* Total Revenue - spans 2 columns */}
         <button
           onClick={() => onFilter(topCards[0].filter)}
-          className="md:col-span-2 rounded-2xl p-7 text-left shadow-md transition group"
+          className="md:col-span-2 xl:col-span-2 rounded-2xl p-5 sm:p-6 md:p-7 text-left shadow-md transition group"
           style={{
             background: 'var(--card)',
             boxShadow: 'var(--card-shadow)',
@@ -771,7 +771,7 @@ function KPICards({ orders, onFilter }: { orders: Order[]; onFilter: (f: Record<
               <p className="kpi-value text-3xl">{topCards[0].value}</p>
               <p className="kpi-sub mt-2">{topCards[0].sub}</p>
             </div>
-            <div className="flex-shrink-0">
+            <div className="hidden sm:block flex-shrink-0">
               <Sparkline data={topCards[0].sparkline || []} w={260} h={72} />
             </div>
           </div>
@@ -782,7 +782,7 @@ function KPICards({ orders, onFilter }: { orders: Order[]; onFilter: (f: Record<
           <button
             key={c.label}
             onClick={() => onFilter(c.filter)}
-            className="rounded-2xl p-7 text-left shadow-md transition group"
+            className="rounded-2xl p-5 sm:p-6 md:p-7 text-left shadow-md transition group"
             style={{
               background: 'var(--card)',
               boxShadow: 'var(--card-shadow)',
@@ -807,12 +807,12 @@ function KPICards({ orders, onFilter }: { orders: Order[]; onFilter: (f: Record<
       </div>
 
       {/* Bottom Row — Secondary Metrics (4 equal cols) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
         {bottomCards.map((c) => (
           <button
             key={c.label}
             onClick={() => onFilter(c.filter)}
-            className="rounded-2xl p-7 text-left shadow-md transition group"
+            className="rounded-2xl p-5 sm:p-6 md:p-7 text-left shadow-md transition group"
             style={{
               background: 'var(--card)',
               boxShadow: 'var(--card-shadow)',
@@ -1006,6 +1006,9 @@ export default function SalesTrackerApp() {
   const [trackingId, setTrackingId] = useState<string | null>(null);
   const [bulkStatus, setBulkStatus] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileFabOpen, setMobileFabOpen] = useState(false);
+  const [mobileMenuId, setMobileMenuId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Online/offline
@@ -1032,7 +1035,7 @@ export default function SalesTrackerApp() {
       if (e.key === "n" || e.key === "N") setModal({ type: "newOrder" });
       if (e.key === "u" || e.key === "U") setModal({ type: "upload" });
       if (e.key === "?" ) setModal({ type: "shortcuts" });
-      if (e.key === "Escape") { setModal(null); }
+      if (e.key === "Escape") { setModal(null); setMobileSearchOpen(false); setMobileFabOpen(false); setMobileMenuId(null); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
@@ -1191,7 +1194,8 @@ export default function SalesTrackerApp() {
 
       {/* ── NAVBAR ─────────────────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-30 backdrop-blur-xl" style={{ backgroundColor: 'color-mix(in srgb, var(--bg) 80%, transparent)', borderColor: 'var(--border)' }}>
-        <div className="max-w-screen-2xl mx-auto px-6 py-3.5 flex items-center gap-4" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3">
           {/* Logo */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -1201,7 +1205,7 @@ export default function SalesTrackerApp() {
           </div>
 
           {/* Search — centered */}
-          <div className="flex-1 flex justify-center">
+          <div className="hidden md:flex flex-1 justify-center">
             <div className="relative w-full max-w-md">
               <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
               <input
@@ -1217,7 +1221,7 @@ export default function SalesTrackerApp() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="hidden md:flex items-center gap-2 flex-shrink-0 ml-auto">
             <button
               onClick={toggleDarkMode}
               className="p-2 rounded-lg transition-colors btn-ghost"
@@ -1239,6 +1243,40 @@ export default function SalesTrackerApp() {
               <LogOut size={13} /> Logout
             </button>
           </div>
+
+          <div className="flex items-center gap-2 md:hidden ml-auto">
+            <button
+              onClick={() => { setMobileSearchOpen((prev) => !prev); setMobileFabOpen(false); }}
+              className="p-2 rounded-lg transition-colors btn-ghost"
+              title="Search orders"
+            >
+              <Search size={15} />
+            </button>
+            <button onClick={toggleDarkMode} className="p-2 rounded-lg transition-colors btn-ghost" title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
+              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button onClick={() => setModal({ type: "shortcuts" })} className="p-2 rounded-lg transition-colors btn-ghost" title="Keyboard shortcuts">
+              <Keyboard size={15} />
+            </button>
+          </div>
+        </div>
+
+          {mobileSearchOpen && (
+            <div className="md:hidden">
+              <div className="relative w-full">
+                <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
+                <input
+                  ref={searchRef}
+                  value={searchQ}
+                  onChange={(e) => setSearchQ(e.target.value)}
+                  placeholder='Search orders…'
+                  className="w-full pl-9 pr-10 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                  style={{ backgroundColor: 'var(--card)', color: 'var(--text)', borderColor: 'var(--border)', '--placeholder-color': 'var(--text-sub)' } as any}
+                />
+                {searchQ && <button onClick={() => setSearchQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400"><X size={12} /></button>}
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -1294,8 +1332,98 @@ export default function SalesTrackerApp() {
             </div>
           )}
 
+          {/* ── MOBILE CARDS ───────────────────────────────────────────────── */}
+          <div className="block md:hidden px-4 pb-4 space-y-3">
+            {filteredOrders.length === 0 ? (
+              <div className="rounded-2xl border border-[#1F2937] bg-[#111827] p-8 text-center">
+                <Package className="mx-auto mb-3 text-gray-700" size={36} />
+                <p className="text-gray-400 font-medium mb-1">No orders found</p>
+                <p className="text-sm text-gray-600">
+                  {searchQ ? `No results for "${searchQ}"` : "Upload your first PDF to get started 🚀"}
+                </p>
+              </div>
+            ) : filteredOrders.map((o) => {
+              const overdue = isOverdue(o);
+              const isMenuOpen = mobileMenuId === o.id;
+              return (
+                <article
+                  key={o.id}
+                  className={`rounded-2xl border p-4 shadow-sm ${overdue ? "border-red-500/20 bg-red-500/5" : "border-[#1F2937] bg-[#111827]"}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <input
+                        type="checkbox"
+                        className="mt-1 accent-indigo-500"
+                        checked={selected.has(o.id)}
+                        onChange={(e) => {
+                          const n = new Set(selected);
+                          e.target.checked ? n.add(o.id) : n.delete(o.id);
+                          setSelected(n);
+                        }}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-500">Order ID</p>
+                        <p className="mt-0.5 font-mono text-sm font-semibold text-gray-100 truncate">{o.orderNumber}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setMobileMenuId(isMenuOpen ? null : o.id)}
+                      className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#1F2937] transition-colors"
+                      aria-label="Order actions"
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                  </div>
+
+                  <div className="mt-4 flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-white truncate">{o.customerName}</p>
+                      {o.customerPhone && <p className="text-xs text-gray-500 mt-0.5">{o.customerPhone}</p>}
+                    </div>
+                    <p className="text-xl font-black text-white whitespace-nowrap">{fmtCurrency(o.amount)}</p>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <StatusBadge status={o.status} />
+                    {o.starred && <span className="text-xs text-amber-400">★ Starred</span>}
+                    {overdue && <span className="text-xs text-red-400 font-medium">Overdue</span>}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Date</p>
+                      <p className="text-gray-200 font-medium">{fmtDate(o.date)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Product</p>
+                      <p className="text-gray-200 font-medium truncate" title={o.productName}>{o.productName}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">SKU</p>
+                      <p className="text-gray-200 font-mono truncate">{o.sku}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Customer</p>
+                      <p className="text-gray-200 font-medium truncate">{o.customerName}</p>
+                    </div>
+                  </div>
+
+                  {isMenuOpen && (
+                    <div className="mt-4 overflow-hidden rounded-xl border border-[#1F2937] bg-[#0B0F1A]">
+                      <button onClick={() => { setModal({ type: "view", data: o.id }); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm text-gray-300 hover:bg-[#1F2937] transition-colors">View</button>
+                      <button onClick={() => { setModal({ type: "edit", data: o.id }); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm text-gray-300 hover:bg-[#1F2937] transition-colors border-t border-[#1F2937]">Edit</button>
+                      <button onClick={() => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors border-t border-[#1F2937]">Delete</button>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+
           {/* ── TABLE ──────────────────────────────────────────────────────── */}
-          <div className="overflow-x-auto" style={{ maxHeight: "calc(100vh - 320px)", overflowY: "auto" }}>
+          <div className="hidden md:block overflow-x-auto" style={{ maxHeight: "calc(100vh - 320px)", overflowY: "auto" }}>
             <table className="w-full text-sm" style={{backgroundColor:'var(--card)'}}>
               <thead className="sticky top-0 z-10" style={{backgroundColor:'var(--table-head-bg)'}}>
                 <tr style={{borderBottom:'1px solid var(--table-divider)'}}>
@@ -1370,7 +1498,7 @@ export default function SalesTrackerApp() {
           </div>
 
           {/* Table footer */}
-          <div className="px-6 py-3 border-t border-[#1F2937] flex items-center justify-between text-xs text-gray-600">
+          <div className="hidden md:flex px-6 py-3 border-t border-[#1F2937] items-center justify-between text-xs text-gray-600">
             <span>{orders.length} total orders · Cloud persistence · <button onClick={() => setModal({ type: "shortcuts" })} className="hover:text-gray-400 underline">shortcuts</button></span>
             <span className="flex items-center gap-1.5">
               {isOnline ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Online</> : <><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Offline</>}
@@ -1378,6 +1506,26 @@ export default function SalesTrackerApp() {
           </div>
         </div>
       </main>
+
+      <div className="md:hidden fixed bottom-5 right-5 z-40">
+        {mobileFabOpen && (
+          <div className="mb-3 flex flex-col gap-2 items-end">
+            <button onClick={() => { setModal({ type: "upload" }); setMobileFabOpen(false); }} className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#111827] border border-[#1F2937] text-sm font-medium text-gray-200 shadow-2xl">
+              <Upload size={13} /> Upload PDF
+            </button>
+            <button onClick={() => { setModal({ type: "newOrder" }); setMobileFabOpen(false); }} className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-600 text-sm font-semibold text-white shadow-2xl">
+              <Plus size={13} /> New Order
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setMobileFabOpen((prev) => !prev)}
+          className="h-14 w-14 rounded-full bg-indigo-600 text-white shadow-2xl flex items-center justify-center border border-indigo-500/40"
+          aria-label="Open quick actions"
+        >
+          <Plus size={20} className={`transition-transform ${mobileFabOpen ? "rotate-45" : "rotate-0"}`} />
+        </button>
+      </div>
 
       {/* ── MODALS ─────────────────────────────────────────────────────────── */}
 
