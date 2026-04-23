@@ -12,8 +12,10 @@ import {
   MoreHorizontal, TrendingUp, AlertCircle,
   RotateCcw, Home, Zap, Camera, Hash, Share2,
   MapPin, Phone, User, CreditCard, Calendar, Weight as WeightIcon,
-  CheckSquare, XCircle,
+  CheckSquare, XCircle, LogOut,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { useSalesStore, hydrateStore } from "@/lib/store";
 import type { Order, FilterPreset } from "@/lib/store";
 
@@ -956,6 +958,13 @@ function FilterBar({ filters, setFilters, presets, onSavePreset, onDeletePreset,
 export default function SalesTrackerApp() {
   useEffect(() => { hydrateStore(); }, []);
 
+  const router = useRouter();
+  const supabase = createClient();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/auth/login');
+  };
+
   const { orders, presets, darkMode, addOrder, deleteOrder, updateStatus, addNote, toggleStar, savePreset, deletePreset, toggleDarkMode } = useSalesStore();
 
   // Auto-mark orders as delivered after 10 days if still in Dispatched status
@@ -1186,6 +1195,10 @@ export default function SalesTrackerApp() {
             </button>
             <button onClick={() => setModal({ type: "shortcuts" })} className="p-2 rounded-lg transition-colors btn-ghost" title="Keyboard shortcuts">
               <Keyboard size={15} />
+            </button>
+            <div className="w-px h-5 mx-1" style={{ backgroundColor: 'var(--border)' }}></div>
+            <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-xl transition-colors" title="Logout">
+              <LogOut size={13} /> Logout
             </button>
           </div>
         </div>
