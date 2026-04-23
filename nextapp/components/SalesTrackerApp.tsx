@@ -1060,26 +1060,39 @@ export default function SalesTrackerApp() {
   }, [deleteOrder, addToast]);
 
   const handlePrintLabel = useCallback((order: Order) => {
-    if (!order.labelBase64) {
+    if (!order.labelBase64 || !order.labelMimeType) {
       addToast("No uploaded PDF or image found for this order", "warning");
       return;
     }
 
-    const win = window.open("", "_blank", "noopener,noreferrer");
-    if (!win) {
-      addToast("Popup blocked. Allow popups to print the label.", "warning");
-      return;
-    }
+    try {
+      const byteCharacters = atob(order.labelBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: order.labelMimeType });
+      const url = URL.createObjectURL(blob);
 
-    if (order.labelMimeType === "application/pdf") {
-      win.document.write(`<html><body style="margin:0"><embed width="100%" height="100%" src="data:application/pdf;base64,${order.labelBase64}" type="application/pdf"/></body></html>`);
-    } else {
-      win.document.write(`<html><body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#000"><img src="data:${order.labelMimeType};base64,${order.labelBase64}" style="max-width:100%;max-height:100vh"/></body></html>`);
-    }
+      const win = window.open(url, "_blank");
+      if (!win) {
+        addToast("Popup blocked. Allow popups to print the label.", "warning");
+        return;
+      }
 
-    win.document.close();
-    win.focus();
-    setTimeout(() => win.print(), 500);
+      // For images, try to trigger print automatically
+      if (order.labelMimeType !== "application/pdf") {
+        win.onload = () => {
+          win.print();
+          // Optionally revoke the URL after printing
+          // URL.revokeObjectURL(url);
+        };
+      }
+    } catch (err) {
+      console.error("Print error:", err);
+      addToast("Failed to process label for printing", "error");
+    }
   }, [addToast]);
 
   const handleParsed = useCallback((formData: Partial<Order>, action: "new"|"update", existingId?: string) => {
