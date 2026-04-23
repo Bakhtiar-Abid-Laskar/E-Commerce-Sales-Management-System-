@@ -39,6 +39,8 @@ export interface Order {
   starred: boolean;
   notes: OrderNote[];
   timeline: TimelineEntry[];
+  labelBase64?: string;
+  labelMimeType?: string;
 }
 
 export interface FilterPreset {

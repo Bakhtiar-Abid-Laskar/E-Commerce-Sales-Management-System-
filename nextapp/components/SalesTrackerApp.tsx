@@ -9,7 +9,7 @@ import {
   Edit, Trash2, ChevronDown, ChevronUp, Keyboard, 
   Printer, Clock, RefreshCw, FileText,
   WifiOff, ExternalLink, ArrowUp, ArrowDown,
-  MoreHorizontal, TrendingUp, AlertCircle,
+  TrendingUp, AlertCircle,
   RotateCcw, Home, Zap, Camera, Hash, Share2,
   MapPin, Phone, User, CreditCard, Calendar, Weight as WeightIcon,
   CheckSquare, XCircle, LogOut,
@@ -263,7 +263,7 @@ function OrderForm({ initial, onSave, onCancel, isEdit }: {
 
 // ─── PDF UPLOADER ─────────────────────────────────────────────────────────────
 
-interface QItem { file: File; name: string; status: "pending"|"parsing"|"done"|"failed"; result: Partial<Order>|null; error: string|null; progress: number; }
+interface QItem { file: File; name: string; status: "pending"|"parsing"|"done"|"failed"; result: Partial<Order>|null; error: string|null; progress: number; base64?: string; }
 
 function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
   onParsed: (d: Partial<Order>, a: "new"|"update", id?: string) => void;
@@ -307,18 +307,21 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
       setQueue([...updated]);
       try {
         const b64 = await toBase64(updated[i].file);
-        updated[i] = { ...updated[i], progress: 60 };
+        const mimeType = updated[i].file.type || "application/pdf";
+        updated[i] = { ...updated[i], progress: 60, base64: b64 };
         setQueue([...updated]);
         const res = await fetch("/api/parse-label", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64: b64, mimeType: updated[i].file.type || "application/pdf" }),
+          body: JSON.stringify({ base64: b64, mimeType }),
         });
         const json = await res.json();
         if (!res.ok || json.error) throw new Error(json.error || "Parse failed");
-        updated[i] = { ...updated[i], status: "done", progress: 100, result: json.data };
+        // Attach the label image/PDF to the parsed data so it can be printed later
+        const dataWithLabel: Partial<Order> = { ...json.data, labelBase64: b64, labelMimeType: mimeType };
+        updated[i] = { ...updated[i], status: "done", progress: 100, result: dataWithLabel };
         setQueue([...updated]);
-        collected.push({ data: json.data, fileName: updated[i].name });
+        collected.push({ data: dataWithLabel, fileName: updated[i].name });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         updated[i] = { ...updated[i], status: "failed", progress: 100, error: msg };
@@ -1003,7 +1006,6 @@ export default function SalesTrackerApp() {
   const [trackingId, setTrackingId] = useState<string | null>(null);
   const [bulkStatus, setBulkStatus] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
-  const [rowMenuId, setRowMenuId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Online/offline
@@ -1030,7 +1032,7 @@ export default function SalesTrackerApp() {
       if (e.key === "n" || e.key === "N") setModal({ type: "newOrder" });
       if (e.key === "u" || e.key === "U") setModal({ type: "upload" });
       if (e.key === "?" ) setModal({ type: "shortcuts" });
-      if (e.key === "Escape") { setModal(null); setRowMenuId(null); }
+      if (e.key === "Escape") { setModal(null); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
@@ -1056,6 +1058,29 @@ export default function SalesTrackerApp() {
     setSelected((p) => { const n = new Set(p); n.delete(id); return n; });
     addToast("Order deleted", "delete");
   }, [deleteOrder, addToast]);
+
+  const handlePrintLabel = useCallback((order: Order) => {
+    if (!order.labelBase64) {
+      addToast("No uploaded PDF or image found for this order", "warning");
+      return;
+    }
+
+    const win = window.open("", "_blank", "noopener,noreferrer");
+    if (!win) {
+      addToast("Popup blocked. Allow popups to print the label.", "warning");
+      return;
+    }
+
+    if (order.labelMimeType === "application/pdf") {
+      win.document.write(`<html><body style="margin:0"><embed width="100%" height="100%" src="data:application/pdf;base64,${order.labelBase64}" type="application/pdf"/></body></html>`);
+    } else {
+      win.document.write(`<html><body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#000"><img src="data:${order.labelMimeType};base64,${order.labelBase64}" style="max-width:100%;max-height:100vh"/></body></html>`);
+    }
+
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 500);
+  }, [addToast]);
 
   const handleParsed = useCallback((formData: Partial<Order>, action: "new"|"update", existingId?: string) => {
     if (action === "update" && existingId) handleAddOrder(formData, true, existingId);
@@ -1266,7 +1291,7 @@ export default function SalesTrackerApp() {
                       onChange={(e) => setSelected(e.target.checked ? new Set(filteredOrders.map((o) => o.id)) : new Set())} />
                   </th>
                   <th className="px-2 py-3 w-5" />
-                  {[ ["date","Date"],["orderNumber","Order ID"],["customerName","Customer"],["productName","Product"],["sku","SKU"],["amount","Amount"],["courierPartner","Courier"],["courierAWB","AWB"],["orderType","Type"],["status","Status"],["expectedDeliveryDate","Delivery"]].map(([col, label]) => (
+                  {[ ["date","Date"],["orderNumber","Order ID"],["customerName","Customer"],["productName","Product"],["sku","SKU"],["amount","Amount"],["status","Status"]].map(([col, label]) => (
                     <th key={col} onClick={(e) => handleSort(col, e.shiftKey)}
                       className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer whitespace-nowrap select-none transition-colors hover:text-indigo-500"
                       style={{color:'var(--text-sub)'}}>
@@ -1279,7 +1304,7 @@ export default function SalesTrackerApp() {
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="py-20 text-center">
+                    <td colSpan={9} className="py-20 text-center">
                       <Package className="mx-auto mb-4 text-gray-700" size={40} />
                       <p className="text-gray-400 font-medium mb-1">No orders found</p>
                       <p className="text-sm text-gray-600">
@@ -1315,35 +1340,15 @@ export default function SalesTrackerApp() {
                       </td>
                       <td className="px-3 py-3.5 font-mono text-xs text-gray-500 whitespace-nowrap">{o.sku}</td>
                       <td className="px-3 py-3.5 font-semibold text-gray-900 whitespace-nowrap text-sm">{fmtCurrency(o.amount)}</td>
-                      <td className="px-3 py-3.5 text-xs text-gray-600 whitespace-nowrap">{o.courierPartner}</td>
-                      <td className="px-3 py-3.5 font-mono text-xs text-gray-500 whitespace-nowrap">{(o.courierAWB || "—").slice(0, 12)}</td>
-                      <td className="px-3 py-3.5"><TypeBadge type={o.orderType} /></td>
                       <td className="px-3 py-3.5"><StatusBadge status={o.status} /></td>
-                      <td className="px-3 py-3.5 text-xs whitespace-nowrap">
-                        {overdue
-                          ? <span className="text-red-400 font-medium">{fmtDate(o.expectedDeliveryDate)}</span>
-                          : <span className="text-gray-500">{fmtDate(o.expectedDeliveryDate)}</span>}
-                      </td>
                       <td className="px-3 py-3.5">
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1 flex-wrap">
                           <button onClick={() => setModal({ type: "view", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="View"><Eye size={13} /></button>
                           <button onClick={() => setModal({ type: "edit", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="Edit"><Edit size={13} /></button>
-                          <button onClick={() => { updateStatus([o.id], "Delivered"); addToast("Marked delivered", "success"); }} className="p-1.5 hover:bg-emerald-500/10 rounded-lg text-gray-600 hover:text-emerald-400 transition-colors" title="Mark delivered"><CheckCircle size={13} /></button>
-                          <div className="relative">
-                            <button onClick={() => setRowMenuId(rowMenuId === o.id ? null : o.id)} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors"><MoreHorizontal size={13} /></button>
-                            {rowMenuId === o.id && (
-                              <div className="absolute right-0 mt-1 bg-[#111827] border border-[#1F2937] rounded-xl shadow-2xl z-20 w-44 overflow-hidden" onMouseLeave={() => setRowMenuId(null)}>
-                                {[
-                                  ["Print Invoice", () => setModal({ type: "invoice", data: o.id })],
-                                  ["Packing Slip", () => setModal({ type: "slip", data: o.id })],
-                                  ["Delete", () => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); }],
-                                ].map(([l, fn]) => (
-                                  <button key={l as string} onClick={() => { (fn as () => void)(); setRowMenuId(null); }}
-                                    className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${l === "Delete" ? "text-red-400 hover:bg-red-500/10" : "text-gray-400 hover:text-white hover:bg-[#1F2937]"}`}>{l as string}</button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                          <button onClick={() => handlePrintLabel(o)} className={`p-1.5 rounded-lg transition-colors ${o.labelBase64 ? "hover:bg-indigo-500/10 text-gray-600 hover:text-indigo-400" : "text-gray-700 opacity-50 cursor-not-allowed"}`} title={o.labelBase64 ? "Print uploaded label" : "No uploaded label"} disabled={!o.labelBase64}><Printer size={13} /></button>
+                          <button onClick={() => setModal({ type: "invoice", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="Print Invoice"><FileText size={13} /></button>
+                          <button onClick={() => setModal({ type: "slip", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg text-gray-600 hover:text-gray-300 transition-colors" title="Packing Slip"><Package size={13} /></button>
+                          <button onClick={() => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); }} className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-600 hover:text-red-400 transition-colors" title="Delete"><Trash2 size={13} /></button>
                         </div>
                       </td>
                     </tr>
