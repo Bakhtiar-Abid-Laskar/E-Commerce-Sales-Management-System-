@@ -612,7 +612,7 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
                             return (
                                 <div className="bg-card p-3 rounded-xl border border-token shadow-2xl">
                                     <p className="text-xs font-black uppercase tracking-widest text-muted">{payload[0].payload.name}</p>
-                                    <p className="text-sm font-black mt-1">{fmtCurrency(payload[0].value)}</p>
+                                  <p className="text-sm font-black mt-1">{fmtCurrency(Number(payload[0].value ?? 0))}</p>
                                 </div>
                             );
                         }
