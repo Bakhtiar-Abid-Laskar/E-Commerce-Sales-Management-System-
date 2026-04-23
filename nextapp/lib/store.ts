@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,111 +46,6 @@ export interface FilterPreset {
   filters: Record<string, unknown>;
 }
 
-// ─── Sample seed data ─────────────────────────────────────────────────────────
-
-const SAMPLE_ORDERS: Order[] = [
-  {
-    id: "ord_001",
-    productName: "Sony WH-1000XM5 Headphones",
-    sku: "SON-WH-XM5-BLK",
-    invoiceNumber: "INV-2024-0341",
-    orderNumber: "ORD-2024-0341",
-    amount: 29990,
-    customerName: "Rahul Sharma",
-    customerPhone: "9876543210",
-    courierPartner: "Delhivery",
-    courierAWB: "DEL1234567890",
-    deliveryAddress: "B-204, Ansal Towers, Sector 62, Noida",
-    pincode: "201301",
-    weight: "320g",
-    date: "2024-01-10",
-    expectedDeliveryDate: "2024-01-15",
-    orderType: "Standard",
-    status: "Delivered",
-    priority: "Normal",
-    starred: false,
-    notes: [{ text: "Customer requested gift wrapping", timestamp: "2024-01-10T11:00:00", by: "User" }],
-    timeline: [
-      { action: "Order created", timestamp: "2024-01-10T10:30:00", by: "User" },
-      { action: "Status → Dispatched", timestamp: "2024-01-12T14:20:00", by: "User" },
-      { action: "Status → Delivered", timestamp: "2024-01-15T16:45:00", by: "User" },
-    ],
-  },
-  {
-    id: "ord_002",
-    productName: "Apple AirPods Pro (2nd Gen)",
-    sku: "APL-AIRPODS-PRO2",
-    invoiceNumber: "INV-2024-0342",
-    orderNumber: "ORD-2024-0342",
-    amount: 24900,
-    customerName: "Priya Patel",
-    customerPhone: "9123456789",
-    courierPartner: "BlueDart",
-    courierAWB: "BLU9876543210",
-    deliveryAddress: "12, MG Road, Koramangala, Bengaluru",
-    pincode: "560034",
-    weight: "180g",
-    date: "2024-01-14",
-    expectedDeliveryDate: new Date(Date.now() - 2 * 86400000).toISOString().split("T")[0],
-    orderType: "Standard",
-    status: "Dispatched",
-    priority: "Urgent",
-    starred: true,
-    notes: [],
-    timeline: [
-      { action: "Order created", timestamp: "2024-01-14T09:15:00", by: "User" },
-      { action: "Status → Packed", timestamp: "2024-01-14T15:30:00", by: "User" },
-      { action: "Status → Dispatched", timestamp: "2024-01-15T08:00:00", by: "User" },
-    ],
-  },
-  {
-    id: "ord_003",
-    productName: 'Samsung 4K Monitor 27"',
-    sku: "SAM-MON-27-4K",
-    invoiceNumber: "INV-2024-0343",
-    orderNumber: "ORD-2024-0343",
-    amount: 45000,
-    customerName: "Amit Verma",
-    customerPhone: "9988776655",
-    courierPartner: "Ekart",
-    courierAWB: "EKT5432167890",
-    deliveryAddress: "Flat 5B, Tower C, Oberoi Garden, Mumbai",
-    pincode: "400063",
-    weight: "7.2kg",
-    date: "2024-01-13",
-    expectedDeliveryDate: new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0],
-    orderType: "Standard",
-    status: "Processing",
-    priority: "Normal",
-    starred: false,
-    notes: [{ text: "Large package - needs ground floor delivery", timestamp: "2024-01-13T14:00:00", by: "User" }],
-    timeline: [{ action: "Order created", timestamp: "2024-01-13T13:00:00", by: "User" }],
-  },
-  {
-    id: "ord_004",
-    productName: "Nike Air Max 270",
-    sku: "NIK-AM270-BLK-10",
-    invoiceNumber: "INV-2024-0344",
-    orderNumber: "ORD-2024-0344",
-    amount: 12995,
-    customerName: "Sneha Joshi",
-    customerPhone: "9871234560",
-    courierPartner: "DTDC",
-    courierAWB: "DTC1122334455",
-    deliveryAddress: "23, Park Street, New Delhi",
-    pincode: "110001",
-    weight: "850g",
-    date: "2024-01-08",
-    expectedDeliveryDate: "2024-01-12",
-    orderType: "Return",
-    status: "Processing",
-    priority: "Normal",
-    starred: false,
-    notes: [{ text: "Wrong size delivered, customer wants exchange", timestamp: "2024-01-16T10:00:00", by: "User" }],
-    timeline: [{ action: "Return order created", timestamp: "2024-01-16T10:00:00", by: "User" }],
-  },
-];
-
 // ─── ID generator ─────────────────────────────────────────────────────────────
 
 const genId = () => `ord_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -182,26 +78,11 @@ interface SalesStore {
   setHydrated: (v: boolean) => void;
 }
 
-// ─── localforage helper (dynamic import — safe in SSR) ────────────────────────
-
-const lf = {
-  async getItem<T>(key: string): Promise<T | null> {
-    if (typeof window === "undefined") return null;
-    const mod = await import("localforage");
-    return mod.default.getItem<T>(key);
-  },
-  async setItem<T>(key: string, value: T): Promise<void> {
-    if (typeof window === "undefined") return;
-    const mod = await import("localforage");
-    await mod.default.setItem(key, value);
-  },
-};
-
 // ─── Zustand store ────────────────────────────────────────────────────────────
 
 export const useSalesStore = create<SalesStore>()(
   subscribeWithSelector((set, get) => ({
-    orders: SAMPLE_ORDERS,
+    orders: [],
     darkMode: false,
     presets: [],
     hydrated: false,
@@ -210,19 +91,33 @@ export const useSalesStore = create<SalesStore>()(
 
     setOrders: (orders) => {
       set({ orders });
-      lf.setItem("salestracker_orders", orders);
     },
 
-    addOrder: (form, isEdit = false, editId) => {
+    addOrder: async (form, isEdit = false, editId) => {
       const ts = new Date().toISOString();
+      const supabase = createClient();
+      const userRes = await supabase.auth.getUser();
+      const user = userRes.data.user;
+      if (!user) return; // Must be logged in
+
       if (isEdit && editId) {
-        const orders = get().orders.map((o) =>
-          o.id === editId
-            ? { ...o, ...form, timeline: [...(o.timeline || []), { action: "Order edited", timestamp: ts, by: "User" }] }
-            : o
-        );
-        set({ orders });
-        lf.setItem("salestracker_orders", orders);
+        const currentOrders = get().orders;
+        const target = currentOrders.find(o => o.id === editId);
+        if (!target) return;
+
+        const updatedOrder = {
+          ...target,
+          ...form,
+          timeline: [...(target.timeline || []), { action: "Order edited", timestamp: ts, by: "User" }]
+        };
+
+        const orders = currentOrders.map((o) => o.id === editId ? updatedOrder : o);
+        set({ orders }); // Optimistic update
+
+        await supabase.from('orders').update({
+          ...updatedOrder,
+          user_id: user.id
+        }).eq('id', editId);
       } else {
         const newOrder: Order = {
           id: genId(),
@@ -248,34 +143,53 @@ export const useSalesStore = create<SalesStore>()(
           timeline: [],
           ...form,
         };
-        // Override starred and timeline after spread
         newOrder.starred = form.priority === "Starred" || !!form.starred;
         newOrder.timeline = [{ action: "Order created", timestamp: ts, by: "User" }];
+        
         const orders = [newOrder, ...get().orders];
-        set({ orders });
-        lf.setItem("salestracker_orders", orders);
+        set({ orders }); // Optimistic update
+
+        await supabase.from('orders').insert({
+          ...newOrder,
+          user_id: user.id
+        });
       }
     },
 
-    deleteOrder: (id) => {
+    deleteOrder: async (id) => {
       const orders = get().orders.filter((o) => o.id !== id);
-      set({ orders });
-      lf.setItem("salestracker_orders", orders);
+      set({ orders }); // Optimistic update
+
+      const supabase = createClient();
+      await supabase.from('orders').delete().eq('id', id);
     },
 
-    updateStatus: (ids, newStatus) => {
+    updateStatus: async (ids, newStatus) => {
       const ts = new Date().toISOString();
-      const orders = get().orders.map((o) =>
+      const supabase = createClient();
+      const currentOrders = get().orders;
+
+      const orders = currentOrders.map((o) =>
         ids.includes(o.id)
           ? { ...o, status: newStatus, timeline: [...(o.timeline || []), { action: `Status → ${newStatus}`, timestamp: ts, by: "User" }] }
           : o
       );
-      set({ orders });
-      lf.setItem("salestracker_orders", orders);
+      set({ orders }); // Optimistic update
+
+      // Update in Supabase
+      const updatedItems = orders.filter(o => ids.includes(o.id));
+      for (const item of updatedItems) {
+         await supabase.from('orders').update({
+           status: item.status,
+           timeline: item.timeline
+         }).eq('id', item.id);
+      }
     },
 
-    addNote: (id, text) => {
+    addNote: async (id, text) => {
       const entry: OrderNote = { text, timestamp: new Date().toISOString(), by: "User" };
+      const supabase = createClient();
+      
       const orders = get().orders.map((o) =>
         o.id === id
           ? {
@@ -285,16 +199,30 @@ export const useSalesStore = create<SalesStore>()(
             }
           : o
       );
-      set({ orders });
-      lf.setItem("salestracker_orders", orders);
+      set({ orders }); // Optimistic update
+
+      const target = orders.find(o => o.id === id);
+      if (target) {
+        await supabase.from('orders').update({
+          notes: target.notes,
+          timeline: target.timeline
+        }).eq('id', id);
+      }
     },
 
-    toggleStar: (id) => {
+    toggleStar: async (id) => {
+      const supabase = createClient();
       const orders = get().orders.map((o) =>
         o.id === id ? { ...o, starred: !o.starred } : o
       );
-      set({ orders });
-      lf.setItem("salestracker_orders", orders);
+      set({ orders }); // Optimistic update
+
+      const target = orders.find(o => o.id === id);
+      if (target) {
+        await supabase.from('orders').update({
+          starred: target.starred
+        }).eq('id', id);
+      }
     },
 
     toggleDarkMode: () => {
@@ -306,20 +234,39 @@ export const useSalesStore = create<SalesStore>()(
       }
     },
 
-    savePreset: (name, filters) => {
+    savePreset: async (name, filters) => {
       if (!name.trim()) return;
+      const supabase = createClient();
+      const userRes = await supabase.auth.getUser();
+      const user = userRes.data.user;
+      if (!user) return;
+
+      const trimmedName = name.trim();
       const presets = [
-        ...get().presets.filter((p) => p.name !== name),
-        { name: name.trim(), filters },
+        ...get().presets.filter((p) => p.name !== trimmedName),
+        { name: trimmedName, filters },
       ];
-      set({ presets });
-      lf.setItem("salestracker_presets", presets);
+      set({ presets }); // Optimistic update
+
+      await supabase.from('presets').upsert({
+        name: trimmedName,
+        filters,
+        user_id: user.id
+      });
     },
 
-    deletePreset: (name) => {
+    deletePreset: async (name) => {
       const presets = get().presets.filter((p) => p.name !== name);
-      set({ presets });
-      lf.setItem("salestracker_presets", presets);
+      set({ presets }); // Optimistic update
+
+      const supabase = createClient();
+      const userRes = await supabase.auth.getUser();
+      if (!userRes.data.user) return;
+
+      await supabase.from('presets')
+        .delete()
+        .eq('name', name)
+        .eq('user_id', userRes.data.user.id);
     },
   }))
 );
@@ -330,10 +277,28 @@ export async function hydrateStore() {
   const store = useSalesStore.getState();
   if (store.hydrated) return;
 
-  const [orders, presets] = await Promise.all([
-    lf.getItem<Order[]>("salestracker_orders"),
-    lf.getItem<FilterPreset[]>("salestracker_presets"),
-  ]);
+  const supabase = createClient();
+  const userRes = await supabase.auth.getUser();
+  const user = userRes.data.user;
+
+  let orders: Order[] = [];
+  let presets: FilterPreset[] = [];
+
+  if (user) {
+    // Fetch orders and presets from Supabase
+    const [ordersRes, presetsRes] = await Promise.all([
+      supabase.from('orders').select('*').order('created_at', { ascending: false }),
+      supabase.from('presets').select('*').order('created_at', { ascending: false })
+    ]);
+
+    if (ordersRes.data) {
+      // Ensure notes and timeline are parsed properly if Supabase returns them as arrays/objects
+      orders = ordersRes.data as Order[];
+    }
+    if (presetsRes.data) {
+      presets = presetsRes.data as FilterPreset[];
+    }
+  }
 
   // Dark mode still uses localStorage (UI preference, not data)
   const dm = typeof window !== "undefined"
@@ -341,11 +306,13 @@ export async function hydrateStore() {
     : false;
 
   useSalesStore.setState({
-    orders: orders ?? SAMPLE_ORDERS,
-    presets: presets ?? [],
+    orders,
+    presets,
     darkMode: dm,
     hydrated: true,
   });
 
-  if (dm) document.documentElement.classList.add("dark");
+  if (dm && typeof document !== "undefined") {
+    document.documentElement.classList.add("dark");
+  }
 }

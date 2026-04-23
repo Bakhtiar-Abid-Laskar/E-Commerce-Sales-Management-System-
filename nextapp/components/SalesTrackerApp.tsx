@@ -1355,7 +1355,7 @@ export default function SalesTrackerApp() {
 
           {/* Table footer */}
           <div className="px-6 py-3 border-t border-[#1F2937] flex items-center justify-between text-xs text-gray-600">
-            <span>{orders.length} total orders · IndexedDB persistence · <button onClick={() => setModal({ type: "shortcuts" })} className="hover:text-gray-400 underline">shortcuts</button></span>
+            <span>{orders.length} total orders · Cloud persistence · <button onClick={() => setModal({ type: "shortcuts" })} className="hover:text-gray-400 underline">shortcuts</button></span>
             <span className="flex items-center gap-1.5">
               {isOnline ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Online</> : <><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Offline</>}
             </span>
