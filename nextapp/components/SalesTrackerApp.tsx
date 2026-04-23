@@ -14,9 +14,11 @@ import {
   MapPin, Phone, User, CreditCard, Calendar, Weight as WeightIcon,
   CheckSquare, XCircle, LogOut,
 } from "lucide-react";
+import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useSalesStore, hydrateStore } from "@/lib/store";
+import { useSalesStore, Order } from "@/lib/store";
+
 import type { Order, FilterPreset } from "@/lib/store";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -710,7 +712,7 @@ function TrackingPage({ orderNumber, orders, onBack }: { orderNumber: string; or
 
 // ─── KPI CARDS ────────────────────────────────────────────────────────────────
 
-function KPICards({ orders, onFilter }: { orders: Order[]; onFilter: (f: Record<string, unknown>) => void }) {
+function KPICards({ orders, onFilter, onOpenAnalytics }: { orders: Order[]; onFilter: (f: Record<string, unknown>) => void; onOpenAnalytics: () => void }) {
   const stats = useMemo(() => {
     const revenue = orders.filter((o) => o.orderType !== "Return").reduce((s, o) => s + Number(o.amount || 0), 0);
     const total = orders.length;
@@ -756,25 +758,20 @@ function KPICards({ orders, onFilter }: { orders: Order[]; onFilter: (f: Record<
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
         {/* Total Revenue - spans 2 columns */}
         <button
-          onClick={() => onFilter(topCards[0].filter)}
-          className="md:col-span-2 xl:col-span-2 rounded-2xl p-5 sm:p-6 md:p-7 text-left shadow-md transition group"
-          style={{
-            background: 'var(--card)',
-            boxShadow: 'var(--card-shadow)',
-            color: 'var(--text)',
-            border: 'none',
-          }}
+          onClick={onOpenAnalytics}
+          className="kpi-card md:col-span-2 xl:col-span-2 rounded-2xl p-5 sm:p-6 md:p-7 text-left transition group w-full relative cursor-pointer border border-transparent hover:border-indigo-400/40 hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_30px_rgba(99,102,241,0.15)]"
         >
           <div className="flex items-start justify-between gap-6">
             <div className="flex-1">
-              <p className="kpi-label mb-2">Total Revenue</p>
-              <p className="kpi-value text-3xl">{topCards[0].value}</p>
+              <p className="kpi-label mb-3">Total Revenue</p>
+              <p className="kpi-value" style={{ fontSize: '2.4rem' }}>{topCards[0].value}</p>
               <p className="kpi-sub mt-2">{topCards[0].sub}</p>
             </div>
             <div className="hidden sm:block flex-shrink-0">
-              <Sparkline data={topCards[0].sparkline || []} w={260} h={72} />
+              <Sparkline data={topCards[0].sparkline || []} w={260} h={72} color="var(--accent)" />
             </div>
           </div>
+          <span className="absolute bottom-4 right-5 text-xs font-medium" style={{ color: 'var(--text-sub)' }}>View Analytics →</span>
         </button>
 
         {/* Total Orders & Dispatch Rate - 1 col each */}
@@ -782,24 +779,18 @@ function KPICards({ orders, onFilter }: { orders: Order[]; onFilter: (f: Record<
           <button
             key={c.label}
             onClick={() => onFilter(c.filter)}
-            className="rounded-2xl p-5 sm:p-6 md:p-7 text-left shadow-md transition group"
-            style={{
-              background: 'var(--card)',
-              boxShadow: 'var(--card-shadow)',
-              color: 'var(--text)',
-              border: 'none',
-            }}
+            className="kpi-card rounded-2xl p-5 sm:p-6 md:p-7 text-left transition group w-full"
           >
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="kpi-label">{c.label}</p>
                 {c.icon && (
-                  <div className="p-1 rounded-lg transition-colors" style={{backgroundColor:'var(--bg-subtle)'}}>
-                    <c.icon size={12} className="text-sub group-hover:text-indigo-400 transition-colors" />
+                  <div className="p-1.5 rounded-lg transition-colors" style={{backgroundColor:'var(--accent-muted)'}}>
+                    <c.icon size={14} style={{ color: 'var(--accent)' }} className="group-hover:scale-110 transition-transform" />
                   </div>
                 )}
               </div>
-              <p className="kpi-value text-2xl">{c.value}</p>
+              <p className="kpi-value" style={{ fontSize: '2.4rem' }}>{c.value}</p>
               <p className="kpi-sub mt-2">{c.sub}</p>
             </div>
           </button>
@@ -812,21 +803,15 @@ function KPICards({ orders, onFilter }: { orders: Order[]; onFilter: (f: Record<
           <button
             key={c.label}
             onClick={() => onFilter(c.filter)}
-            className="rounded-2xl p-5 sm:p-6 md:p-7 text-left shadow-md transition group"
-            style={{
-              background: 'var(--card)',
-              boxShadow: 'var(--card-shadow)',
-              color: 'var(--text)',
-              border: 'none',
-            }}
+            className="kpi-card rounded-2xl p-5 sm:p-6 md:p-7 text-left transition group w-full"
           >
             <div className="flex items-center justify-between mb-2">
               <p className="kpi-label">{c.label}</p>
-              <div className="p-1 rounded-lg transition-colors" style={{backgroundColor:'var(--bg-subtle)'}}>
-                <c.icon size={11} className="text-sub group-hover:text-indigo-400 transition-colors" />
+              <div className="p-1.5 rounded-lg transition-colors" style={{backgroundColor:'var(--accent-muted)'}}>
+                <c.icon size={16} style={{ color: 'var(--accent)' }} className="group-hover:scale-110 transition-transform" />
               </div>
             </div>
-            <p className="kpi-value text-xl">{c.value}</p>
+            <p className="kpi-value" style={{ fontSize: '2.4rem' }}>{c.value}</p>
             <p className="kpi-sub mt-2">{c.sub}</p>
           </button>
         ))}
@@ -1009,6 +994,8 @@ export default function SalesTrackerApp() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileFabOpen, setMobileFabOpen] = useState(false);
   const [mobileMenuId, setMobileMenuId] = useState<string | null>(null);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const dashboardScrollRef = useRef(0);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Online/offline
@@ -1035,10 +1022,20 @@ export default function SalesTrackerApp() {
       if (e.key === "n" || e.key === "N") setModal({ type: "newOrder" });
       if (e.key === "u" || e.key === "U") setModal({ type: "upload" });
       if (e.key === "?" ) setModal({ type: "shortcuts" });
-      if (e.key === "Escape") { setModal(null); setMobileSearchOpen(false); setMobileFabOpen(false); setMobileMenuId(null); }
+      if (e.key === "Escape") { setModal(null); setMobileSearchOpen(false); setMobileFabOpen(false); setMobileMenuId(null); setAnalyticsOpen(false); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  const openAnalytics = useCallback(() => {
+    dashboardScrollRef.current = window.scrollY;
+    setAnalyticsOpen(true);
+  }, []);
+
+  const closeAnalytics = useCallback(() => {
+    setAnalyticsOpen(false);
+    requestAnimationFrame(() => window.scrollTo({ top: dashboardScrollRef.current, behavior: "auto" }));
   }, []);
 
   // Toast
@@ -1193,13 +1190,13 @@ export default function SalesTrackerApp() {
       )}
 
       {/* ── NAVBAR ─────────────────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-30 backdrop-blur-xl" style={{ backgroundColor: 'color-mix(in srgb, var(--bg) 80%, transparent)', borderColor: 'var(--border)' }}>
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <nav className="navbar sticky top-0 z-30">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col gap-3">
           <div className="flex items-center gap-3">
           {/* Logo */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <Package size={14} className="text-white" />
+            <div className="navbar-logo w-8 h-8 flex items-center justify-center">
+              <Package size={16} className="text-white" />
             </div>
             <span className="font-semibold text-sm" style={{color:'var(--text)'}}>SalesTracker</span>
           </div>
@@ -1207,16 +1204,20 @@ export default function SalesTrackerApp() {
           {/* Search — centered */}
           <div className="hidden md:flex flex-1 justify-center">
             <div className="relative w-full max-w-md">
-              <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
               <input
                 ref={searchRef}
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 placeholder='Search orders… ("/" to focus)'
-                className="w-full pl-9 pr-4 py-2 text-sm border rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
-                style={{ backgroundColor: 'var(--card)', color: 'var(--text)', borderColor: 'var(--border)', '--placeholder-color': 'var(--text-sub)' } as any}
+                className="navbar-search w-full pl-9 pr-4 py-2.5 text-sm border rounded-xl focus:outline-none transition-all"
+                style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text)', borderColor: 'var(--input-border)' }}
               />
-              {searchQ && <button onClick={() => setSearchQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400"><X size={12} /></button>}
+              {searchQ && (
+                <button onClick={() => setSearchQ("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                  <X size={14} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -1224,56 +1225,60 @@ export default function SalesTrackerApp() {
           <div className="hidden md:flex items-center gap-2 flex-shrink-0 ml-auto">
             <button
               onClick={toggleDarkMode}
-              className="p-2 rounded-lg transition-colors btn-ghost"
+              className="navbar-icon-btn p-2"
               title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-            <button onClick={() => setModal({ type: "upload" })} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl transition-colors btn-ghost">
-              <Upload size={13} /> Upload PDF
+            <button onClick={() => setModal({ type: "upload" })} className="btn-ghost flex items-center gap-1.5 px-3 py-2 text-sm font-medium">
+              <Upload size={14} /> Upload PDF
             </button>
-            <button onClick={() => setModal({ type: "newOrder" })} className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors">
-              <Plus size={13} /> New Order
+            <button onClick={() => setModal({ type: "newOrder" })} className="btn-accent flex items-center gap-1.5 px-4 py-2 text-sm font-semibold shadow-lg">
+              <Plus size={14} /> New Order
             </button>
-            <button onClick={() => setModal({ type: "shortcuts" })} className="p-2 rounded-lg transition-colors btn-ghost" title="Keyboard shortcuts">
-              <Keyboard size={15} />
+            <button onClick={() => setModal({ type: "shortcuts" })} className="navbar-icon-btn p-2" title="Keyboard shortcuts">
+              <Keyboard size={16} />
             </button>
-            <div className="w-px h-5 mx-1" style={{ backgroundColor: 'var(--border)' }}></div>
-            <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-xl transition-colors" title="Logout">
-              <LogOut size={13} /> Logout
+            <div className="w-px h-6 mx-1" style={{ backgroundColor: 'var(--border)' }}></div>
+            <button onClick={handleLogout} className="navbar-logout flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg" title="Logout">
+              <LogOut size={14} /> Logout
             </button>
           </div>
 
           <div className="flex items-center gap-2 md:hidden ml-auto">
             <button
               onClick={() => { setMobileSearchOpen((prev) => !prev); setMobileFabOpen(false); }}
-              className="p-2 rounded-lg transition-colors btn-ghost"
+              className="navbar-icon-btn p-2"
               title="Search orders"
             >
-              <Search size={15} />
+              <Search size={16} />
             </button>
-            <button onClick={toggleDarkMode} className="p-2 rounded-lg transition-colors btn-ghost" title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
-              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+            <button onClick={toggleDarkMode} className="navbar-icon-btn p-2" title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
+              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-            <button onClick={() => setModal({ type: "shortcuts" })} className="p-2 rounded-lg transition-colors btn-ghost" title="Keyboard shortcuts">
-              <Keyboard size={15} />
+            <button onClick={() => setModal({ type: "shortcuts" })} className="navbar-icon-btn p-2" title="Keyboard shortcuts">
+              <Keyboard size={16} />
             </button>
           </div>
         </div>
 
           {mobileSearchOpen && (
-            <div className="md:hidden">
+            <div className="md:hidden px-4 pb-3">
               <div className="relative w-full">
-                <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
                 <input
                   ref={searchRef}
                   value={searchQ}
                   onChange={(e) => setSearchQ(e.target.value)}
                   placeholder='Search orders…'
-                  className="w-full pl-9 pr-10 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
-                  style={{ backgroundColor: 'var(--card)', color: 'var(--text)', borderColor: 'var(--border)', '--placeholder-color': 'var(--text-sub)' } as any}
+                  className="navbar-search w-full pl-9 pr-10 py-2.5 text-sm border rounded-xl focus:outline-none transition-all"
+                  style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text)', borderColor: 'var(--input-border)' }}
                 />
-                {searchQ && <button onClick={() => setSearchQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400"><X size={12} /></button>}
+                {searchQ && (
+                  <button onClick={() => setSearchQ("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -1284,17 +1289,17 @@ export default function SalesTrackerApp() {
       <main className="max-w-screen-2xl mx-auto px-6 py-6">
 
         {/* KPI Cards */}
-        <KPICards orders={orders} onFilter={(f) => setFilters(f as Filters)} />
+        <KPICards orders={orders} onFilter={(f) => setFilters(f as Filters)} onOpenAnalytics={openAnalytics} />
 
         {/* Table card */}
-        <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', border: '1px solid var(--border)' }}>
+        <div className="card-token rounded-2xl overflow-hidden theme-transition">
 
           {/* Table toolbar */}
           <div className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-medium text-muted">
+              <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
                 {filteredOrders.length} order{filteredOrders.length !== 1 ? "s" : ""}
-                {searchQ && <span className="text-sub"> for "{searchQ}"</span>}
+                {searchQ && <span style={{ color: 'var(--text-sub)' }}> for "{searchQ}"</span>}
               </span>
               <FilterBar filters={filters} setFilters={setFilters} presets={presets}
                 onSavePreset={(n) => { savePreset(n, filters as Record<string, unknown>); addToast(`Preset "${n}" saved`, "success"); }}
@@ -1303,13 +1308,13 @@ export default function SalesTrackerApp() {
               />
             </div>
             <div className="relative">
-              <button onClick={() => setExportOpen(!exportOpen)} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl transition-colors btn-ghost">
-                <Download size={13} /> Export <ChevronDown size={11} />
+              <button onClick={() => setExportOpen(!exportOpen)} className="btn-ghost flex items-center gap-1.5 px-3 py-2 text-sm font-medium">
+                <Download size={14} /> Export <ChevronDown size={12} />
               </button>
               {exportOpen && (
-                <div className="absolute right-0 mt-1 rounded-xl shadow-2xl z-20 w-52 overflow-hidden" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', border: '1px solid var(--border)' }}>
+                <div className="absolute right-0 mt-1 rounded-xl shadow-2xl z-20 w-52 overflow-hidden card-token border" style={{ border: '1px solid var(--border)' }}>
                   {[["All orders (CSV)", () => exportCSV(orders, "all-orders.csv")], ["Filtered (CSV)", () => exportCSV(filteredOrders)], ["Excel (.xlsx)", () => exportExcel(filteredOrders)]].map(([l, fn]) => (
-                    <button key={l as string} onClick={() => { (fn as () => void)(); setExportOpen(false); }} className="w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-opacity-50" style={{ color: 'var(--text-muted)', '--hover-bg': 'var(--border)' } as any} onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--border)')} onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}>{l as string}</button>
+                    <button key={l as string} onClick={() => { (fn as () => void)(); setExportOpen(false); }} className="w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-opacity-50" style={{ color: 'var(--text-muted)' }} onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')} onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}>{l as string}</button>
                   ))}
                 </div>
               )}
@@ -1571,6 +1576,8 @@ export default function SalesTrackerApp() {
       )}
 
       <ToastContainer toasts={toasts} remove={removeToast} />
+
+      <AnalyticsDashboard open={analyticsOpen} onClose={closeAnalytics} orders={orders} darkMode={darkMode} />
     </div>
   );
 }
