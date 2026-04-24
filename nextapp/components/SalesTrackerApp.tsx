@@ -465,7 +465,16 @@ function OrderDetailModal({ order, onClose, onEdit, onDelete, onAddNote, onToggl
   const overdue = isOverdue(order);
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}#/track/${order.orderNumber}` : "";
   const submitNote = () => { if (!newNote.trim()) return; onAddNote(order.id, newNote.trim()); setNewNote(""); };
-  const handlePrint = () => { if (order.labelBase64) window.open(`data:${order.labelMimeType};base64,${order.labelBase64}`, "_blank"); };
+  const handlePrint = () => {
+    if (!order.labelBase64) return;
+    const byteCharacters = atob(order.labelBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: order.labelMimeType || "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  };
 
   return (
     <Modal open onClose={onClose} title={order.orderNumber} size="max-w-2xl">
@@ -779,7 +788,16 @@ export default function SalesTrackerApp() {
     return true;
   };
   const handleDeleteOrder = (id: string) => { deleteOrder(id); addToast("Deleted", "delete"); };
-  const handlePrintLabel = (o: Order) => { if (o.labelBase64) window.open(`data:${o.labelMimeType};base64,${o.labelBase64}`, "_blank"); };
+  const handlePrintLabel = (o: Order) => {
+    if (!o.labelBase64) return;
+    const byteCharacters = atob(o.labelBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: o.labelMimeType || "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  };
   const handleParsed = (d: Partial<Order>, a: "new"|"update", id?: string) => { 
     return handleAddOrder(d, a === "update", id, false); 
   };
