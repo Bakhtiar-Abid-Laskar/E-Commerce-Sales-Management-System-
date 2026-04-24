@@ -847,16 +847,22 @@ export default function SalesTrackerApp() {
                <table className="w-full text-left text-xs">
                  <thead className="bg-subtle/50 text-gray-500 uppercase tracking-widest font-black">
                    <tr>
-                     <th className="px-6 py-3">Order</th>
+                     <th className="px-6 py-3">Date</th>
+                     <th className="px-6 py-3">SKU ID</th>
+                     <th className="px-6 py-3">Product</th>
+                     <th className="px-6 py-3">Order ID</th>
                      <th className="px-6 py-3">Customer</th>
                      <th className="px-6 py-3">Amount</th>
                      <th className="px-6 py-3">Status</th>
-                     <th className="px-6 py-3 text-right">Actions</th>
+                     <th className="px-6 py-3 text-right">Action</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-token">
                    {filteredOrders.map(o => (
                      <tr key={o.id} className="hover:bg-subtle/30 transition-colors">
+                       <td className="px-6 py-4">{fmtDate(o.date)}</td>
+                       <td className="px-6 py-4 font-mono">{o.sku}</td>
+                       <td className="px-6 py-4 truncate max-w-[150px]">{o.productName}</td>
                        <td className="px-6 py-4 font-mono font-bold">{o.orderNumber}</td>
                        <td className="px-6 py-4 font-bold">{o.customerName}</td>
                        <td className="px-6 py-4 font-black">{fmtCurrency(o.amount)}</td>
