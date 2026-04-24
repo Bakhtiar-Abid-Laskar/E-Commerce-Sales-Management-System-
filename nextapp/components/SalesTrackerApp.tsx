@@ -13,7 +13,7 @@ import {
   RotateCcw, Home, Zap, Camera, Hash, Share2,
   MapPin, Phone, User, CreditCard, Calendar, Weight as WeightIcon,
   CheckSquare, XCircle, LogOut, ExternalLink as ExternalLinkIcon,
-  Settings, Mailbox, Plane, Wallet,
+  Settings, Mailbox, Plane, Wallet, Pencil,
 } from "lucide-react";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useRouter } from "next/navigation";
@@ -162,7 +162,7 @@ function Modal({ open, onClose, title, children, size = "max-w-2xl" }: {
 
 // ─── STATUS & TYPE BADGES ─────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, onClick, showIcon }: { status: string; onClick?: (e: React.MouseEvent) => void; showIcon?: boolean }) {
   const cls: Record<string, string> = {
     Processing: "badge-processing",
     Packed:     "badge-packed",
@@ -171,8 +171,13 @@ function StatusBadge({ status }: { status: string }) {
     Cancelled:  "badge-cancelled",
   };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls[status] || "badge-processing"}`}>
+    <span 
+      onClick={onClick}
+      title={onClick ? "Click to update status" : undefined}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-all ${cls[status] || "badge-processing"} ${onClick ? "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-offset-1 hover:ring-indigo-400" : ""}`}
+    >
       {status}
+      {showIcon && <Pencil size={10} className="ml-1 opacity-50" />}
     </span>
   );
 }
@@ -435,13 +440,25 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
 
 // ─── ORDER DETAIL MODAL ───────────────────────────────────────────────────────
 
-function OrderDetailModal({ order, onClose, onEdit, onDelete, onAddNote, onToggleStar, onUpdateStatus }: {
+function OrderDetailModal({ order, onClose, onEdit, onDelete, onAddNote, onToggleStar, onUpdateStatus, autoFocusStatus }: {
   order: Order; onClose: () => void; onEdit: () => void;
   onDelete: (id: string) => void; onAddNote: (id: string, text: string) => void; onToggleStar: (id: string) => void;
   onUpdateStatus: (ids: string[], s: Order["status"]) => void;
+  autoFocusStatus?: boolean;
 }) {
   const [newNote, setNewNote] = useState("");
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const statusSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (autoFocusStatus) {
+      setTimeout(() => {
+        statusSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setShowStatusMenu(true);
+      }, 150);
+    }
+  }, [autoFocusStatus]);
+
   const trackUrl = COURIER_TRACKING[order.courierPartner]?.(order.courierAWB);
   const STATUS_STEPS = ["Processing", "Packed", "Dispatched", "Delivered"];
   const curStep = STATUS_STEPS.indexOf(order.status);
@@ -474,7 +491,7 @@ function OrderDetailModal({ order, onClose, onEdit, onDelete, onAddNote, onToggl
           <div className="sm:col-span-2"><p className="text-xs opacity-50 mb-0.5" style={{ color: 'var(--text)' }}>Address</p><p className="text-xs" style={{ color: 'var(--text)' }}>{order.deliveryAddress}</p></div>
         </div>
         
-        <div className="relative">
+        <div className="relative" ref={statusSectionRef}>
           <button onClick={() => setShowStatusMenu(!showStatusMenu)} className="w-full py-2 bg-subtle border border-token rounded-xl text-xs font-bold flex items-center justify-center gap-2">
             Update Status: <StatusBadge status={order.status} /> <ChevronDown size={14} />
           </button>
@@ -843,7 +860,13 @@ export default function SalesTrackerApp() {
                        <td className="px-6 py-4 font-mono font-bold">{o.orderNumber}</td>
                        <td className="px-6 py-4 font-bold">{o.customerName}</td>
                        <td className="px-6 py-4 font-black">{fmtCurrency(o.amount)}</td>
-                       <td className="px-6 py-4"><StatusBadge status={o.status} /></td>
+                       <td className="px-6 py-4">
+                         <StatusBadge 
+                           status={o.status} 
+                           showIcon 
+                           onClick={(e) => { e.stopPropagation(); setModal({ type: 'view', data: o.id, focusStatus: true } as any); }} 
+                         />
+                       </td>
                        <td className="px-6 py-4 text-right">
                          <div className="flex justify-end gap-2">
                            <button onClick={() => setModal({ type: 'view', data: o.id })} className="p-1.5 hover:bg-subtle rounded-md"><Eye size={14} /></button>
@@ -899,7 +922,11 @@ export default function SalesTrackerApp() {
                     <article key={o.id} onClick={() => setModal({ type: 'view', data: o.id })} className="bg-card border border-token rounded-2xl p-3.5 active:scale-[0.98] transition-all shadow-sm">
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[10px] font-mono font-bold text-gray-400">{o.orderNumber}</span>
-                        <StatusBadge status={o.status} />
+                        <StatusBadge 
+                          status={o.status} 
+                          showIcon 
+                          onClick={(e) => { e.stopPropagation(); setModal({ type: 'view', data: o.id, focusStatus: true } as any); }} 
+                        />
                       </div>
                       <div className="flex justify-between items-end">
                         <div className="min-w-0 flex-1 pr-4">
@@ -934,8 +961,11 @@ export default function SalesTrackerApp() {
                         </div>
                         <button onClick={() => setMobileMenuId(isMenuOpen ? null : o.id)} className="p-2 text-gray-500"><MoreHorizontal size={18} /></button>
                       </div>
-                      <div className="flex justify-between items-end mt-3" onClick={() => setModal({ type: 'view', data: o.id })}>
-                        <div><StatusBadge status={o.status} /><p className="text-[10px] text-gray-500 mt-1">{fmtDate(o.date)}</p></div>
+                      <div className="flex justify-between items-end mt-3">
+                        <div onClick={(e) => { e.stopPropagation(); setModal({ type: 'view', data: o.id, focusStatus: true } as any); }}>
+                          <StatusBadge status={o.status} showIcon />
+                          <p className="text-[10px] text-gray-500 mt-1">{fmtDate(o.date)}</p>
+                        </div>
                         <p className="text-lg font-black">{fmtCurrency(o.amount)}</p>
                       </div>
                       {isMenuOpen && (
@@ -990,6 +1020,7 @@ export default function SalesTrackerApp() {
           onAddNote={addNote} 
           onToggleStar={toggleStar} 
           onUpdateStatus={updateStatus}
+          autoFocusStatus={(modal as any).focusStatus}
         />
       )}
       <Modal open={modal?.type === 'upload'} title="AI Label Reader" onClose={() => setModal(null)} size="max-w-xl">
