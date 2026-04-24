@@ -207,51 +207,51 @@ function OrderForm({ initial, onSave, onCancel, isEdit }: {
   };
 
   const Label = ({ text }: { text: string }) => (
-    <label className="block text-xs font-medium text-gray-500 mb-1.5">{text}</label>
+    <label className="block text-xs font-medium opacity-60 mb-1.5" style={{ color: 'var(--text)' }}>{text}</label>
   );
 
   return (
-    <div className="space-y-5 text-white">
+    <div className="space-y-5" style={{ color: 'var(--text)' }}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><Label text="Product Name" /><input className={inp} value={form.productName || ""} onChange={(e) => f("productName", e.target.value)} placeholder="Sony WH-1000XM5" /></div>
-        <div><Label text="SKU" /><input className={inp} value={form.sku || ""} onChange={(e) => f("sku", e.target.value)} placeholder="SON-WH-XM5-BLK" /></div>
-        <div><Label text="Invoice No." /><input className={inp} value={form.invoiceNumber || ""} onChange={(e) => f("invoiceNumber", e.target.value)} placeholder="INV-2024-XXXX" /></div>
-        <div><Label text="Order No." /><input className={inp} value={form.orderNumber || ""} onChange={(e) => f("orderNumber", e.target.value)} placeholder="ORD-2024-XXXX" /></div>
-        <div><Label text="Amount (₹)" /><input className={inp} type="number" value={form.amount || ""} onChange={(e) => f("amount", Number(e.target.value))} placeholder="0" /></div>
-        <div><Label text="Weight" /><input className={inp} value={form.weight || ""} onChange={(e) => f("weight", e.target.value)} placeholder="500g" /></div>
+        <div><Label text="Product Name" /><input className={inp} value={form.productName || ""} onChange={(e) => f("productName", e.target.value)} placeholder="Sony WH-1000XM5" style={{ color: 'var(--text)' }} /></div>
+        <div><Label text="SKU" /><input className={inp} value={form.sku || ""} onChange={(e) => f("sku", e.target.value)} placeholder="SON-WH-XM5-BLK" style={{ color: 'var(--text)' }} /></div>
+        <div><Label text="Invoice No." /><input className={inp} value={form.invoiceNumber || ""} onChange={(e) => f("invoiceNumber", e.target.value)} placeholder="INV-2024-XXXX" style={{ color: 'var(--text)' }} /></div>
+        <div><Label text="Order No." /><input className={inp} value={form.orderNumber || ""} onChange={(e) => f("orderNumber", e.target.value)} placeholder="ORD-2024-XXXX" style={{ color: 'var(--text)' }} /></div>
+        <div><Label text="Amount (₹)" /><input className={inp} type="number" value={form.amount || ""} onChange={(e) => f("amount", Number(e.target.value))} placeholder="0" style={{ color: 'var(--text)' }} /></div>
+        <div><Label text="Weight" /><input className={inp} value={form.weight || ""} onChange={(e) => f("weight", e.target.value)} placeholder="500g" style={{ color: 'var(--text)' }} /></div>
       </div>
-      <div className="h-px bg-[#1F2937]" />
+      <div className="h-px bg-[#1F2937] opacity-10" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><Label text="Customer Name" /><input className={inp} value={form.customerName || ""} onChange={(e) => f("customerName", e.target.value)} placeholder="Full name" /></div>
-        <div><Label text="Phone (optional)" /><input className={inp} value={form.customerPhone || ""} onChange={(e) => f("customerPhone", e.target.value)} placeholder="10-digit" /></div>
+        <div><Label text="Customer Name" /><input className={inp} value={form.customerName || ""} onChange={(e) => f("customerName", e.target.value)} placeholder="Full name" style={{ color: 'var(--text)' }} /></div>
+        <div><Label text="Phone (optional)" /><input className={inp} value={form.customerPhone || ""} onChange={(e) => f("customerPhone", e.target.value)} placeholder="10-digit" style={{ color: 'var(--text)' }} /></div>
       </div>
-      <div><Label text="Delivery Address" /><textarea className={inp + " resize-none"} rows={2} value={form.deliveryAddress || ""} onChange={(e) => f("deliveryAddress", e.target.value)} placeholder="Full delivery address" /></div>
+      <div><Label text="Delivery Address" /><textarea className={inp + " resize-none"} rows={2} value={form.deliveryAddress || ""} onChange={(e) => f("deliveryAddress", e.target.value)} placeholder="Full delivery address" style={{ color: 'var(--text)' }} /></div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div><Label text="Pincode" /><input className={inp} value={form.pincode || ""} onChange={(e) => f("pincode", e.target.value)} maxLength={6} /></div>
-        <div><Label text="Courier" /><select className={sel} value={form.courierPartner || "Delhivery"} onChange={(e) => f("courierPartner", e.target.value)}>{COURIERS.map((c) => <option key={c}>{c}</option>)}</select></div>
-        <div><Label text="AWB No." /><input className={inp} value={form.courierAWB || ""} onChange={(e) => f("courierAWB", e.target.value)} /></div>
+        <div><Label text="Pincode" /><input className={inp} value={form.pincode || ""} onChange={(e) => f("pincode", e.target.value)} maxLength={6} style={{ color: 'var(--text)' }} /></div>
+        <div><Label text="Courier" /><select className={sel} value={form.courierPartner || "Delhivery"} onChange={(e) => f("courierPartner", e.target.value)} style={{ color: 'var(--text)' }}>{COURIERS.map((c) => <option key={c} style={{ background: 'var(--card)', color: 'var(--text)' }}>{c}</option>)}</select></div>
+        <div><Label text="AWB No." /><input className={inp} value={form.courierAWB || ""} onChange={(e) => f("courierAWB", e.target.value)} style={{ color: 'var(--text)' }} /></div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><Label text="Order Date" /><input className={inp} type="date" value={form.date || ""} onChange={(e) => f("date", e.target.value)} /></div>
-        <div><Label text="Expected Delivery" /><input className={inp} type="date" value={form.expectedDeliveryDate || ""} onChange={(e) => f("expectedDeliveryDate", e.target.value)} /></div>
+        <div><Label text="Order Date" /><input className={inp} type="date" value={form.date || ""} onChange={(e) => f("date", e.target.value)} style={{ color: 'var(--text)' }} /></div>
+        <div><Label text="Expected Delivery" /><input className={inp} type="date" value={form.expectedDeliveryDate || ""} onChange={(e) => f("expectedDeliveryDate", e.target.value)} style={{ color: 'var(--text)' }} /></div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div><Label text="Order Type" /><select className={sel} value={form.orderType || "Standard"} onChange={(e) => f("orderType", e.target.value as Order["orderType"])}>{ORDER_TYPES.map((t) => <option key={t}>{t}</option>)}</select></div>
-        <div><Label text="Status" /><select className={sel} value={form.status || "Processing"} onChange={(e) => f("status", e.target.value as Order["status"])}>{ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}</select></div>
-        <div><Label text="Priority" /><select className={sel} value={form.priority || "Normal"} onChange={(e) => f("priority", e.target.value as Order["priority"])}>{PRIORITIES.map((p) => <option key={p}>{p}</option>)}</select></div>
+        <div><Label text="Order Type" /><select className={sel} value={form.orderType || "Standard"} onChange={(e) => f("orderType", e.target.value as Order["orderType"])} style={{ color: 'var(--text)' }}>{ORDER_TYPES.map((t) => <option key={t} style={{ background: 'var(--card)', color: 'var(--text)' }}>{t}</option>)}</select></div>
+        <div><Label text="Status" /><select className={sel} value={form.status || "Processing"} onChange={(e) => f("status", e.target.value as Order["status"])} style={{ color: 'var(--text)' }}>{ORDER_STATUSES.map((s) => <option key={s} style={{ background: 'var(--card)', color: 'var(--text)' }}>{s}</option>)}</select></div>
+        <div><Label text="Priority" /><select className={sel} value={form.priority || "Normal"} onChange={(e) => f("priority", e.target.value as Order["priority"])} style={{ color: 'var(--text)' }}>{PRIORITIES.map((p) => <option key={p} style={{ background: 'var(--card)', color: 'var(--text)' }}>{p}</option>)}</select></div>
       </div>
       <div>
         <Label text="Notes" />
         <div className="space-y-2 mb-2 max-h-28 overflow-y-auto">
           {(form.notes || []).map((n, i) => (
-            <div key={i} className="bg-[#0B0F1A] rounded-lg px-3 py-2 text-sm">
-              <p className="text-gray-200">{n.text}</p>
-              <p className="text-xs text-gray-600 mt-0.5">{fmtTs(n.timestamp)}</p>
+            <div key={i} className="bg-subtle rounded-lg px-3 py-2 text-sm border border-token">
+              <p style={{ color: 'var(--text)' }}>{n.text}</p>
+              <p className="text-[10px] opacity-40 mt-0.5" style={{ color: 'var(--text)' }}>{fmtTs(n.timestamp)}</p>
             </div>
           ))}
         </div>
         <div className="flex gap-2">
-          <input className={inp + " flex-1"} value={newNote} onChange={(e) => setNewNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addNote()} placeholder="Add a note…" />
+          <input className={inp + " flex-1"} value={newNote} onChange={(e) => setNewNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addNote()} placeholder="Add a note…" style={{ color: 'var(--text)' }} />
           <button onClick={addNote} className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors">Add</button>
         </div>
       </div>
@@ -259,7 +259,7 @@ function OrderForm({ initial, onSave, onCancel, isEdit }: {
         <button onClick={() => onSave(form)} className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm transition-colors">
           {isEdit ? "Save Changes" : "Add Order"}
         </button>
-        <button onClick={onCancel} className="px-5 py-2.5 border border-[#1F2937] hover:bg-[#1F2937] text-gray-400 hover:text-white rounded-xl text-sm transition-colors">Cancel</button>
+        <button onClick={onCancel} className="px-5 py-2.5 border border-token hover:bg-subtle rounded-xl text-sm transition-colors" style={{ color: 'var(--text)' }}>Cancel</button>
       </div>
     </div>
   );
@@ -270,7 +270,7 @@ function OrderForm({ initial, onSave, onCancel, isEdit }: {
 interface QItem { file: File; name: string; status: "pending"|"parsing"|"done"|"failed"; result: Partial<Order>|null; error: string|null; progress: number; base64?: string; }
 
 function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
-  onParsed: (d: Partial<Order>, a: "new"|"update", id?: string) => void;
+  onParsed: (d: Partial<Order>, a: "new"|"update", id?: string) => boolean;
   existingOrders: Order[]; addToast: (m: string, t: string) => void; onClose: () => void;
 }) {
   const [queue, setQueue] = useState<QItem[]>([]);
@@ -353,8 +353,14 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
   const handleReviewSave = (formData: Partial<Order>) => {
     const currentIdx = reviewIndex ?? 0;
     const dup = existingOrders.find((o) => (formData.orderNumber && o.orderNumber === formData.orderNumber) || (formData.courierAWB && o.courierAWB === formData.courierAWB));
-    if (dup) { setReviewModal(null); setDupWarning({ formData, dupOrder: dup }); }
-    else { onParsed(formData, "new"); addToast("Added ✓", "success"); advanceReview(parsedResults, currentIdx + 1); }
+    if (dup) { 
+      setDupWarning({ formData, dupOrder: dup }); 
+    }
+    else { 
+      if (onParsed(formData, "new")) {
+        advanceReview(parsedResults, currentIdx + 1); 
+      }
+    }
   };
 
   const handleReviewSkip = () => { const idx = reviewIndex ?? 0; advanceReview(parsedResults, idx + 1); };
@@ -362,10 +368,14 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
   const handleDup = (action: "update" | "new" | "discard") => {
     if (!dupWarning) return;
     const currentIdx = reviewIndex ?? 0;
-    if (action === "update") { onParsed(dupWarning.formData, "update", dupWarning.dupOrder.id); addToast("Updated ✓", "success"); }
-    else if (action === "new") { onParsed(dupWarning.formData, "new"); addToast("Added new ✓", "success"); }
-    setDupWarning(null); 
-    advanceReview(parsedResults, currentIdx + 1);
+    let success = false;
+    if (action === "update") { success = onParsed(dupWarning.formData, "update", dupWarning.dupOrder.id); }
+    else if (action === "new") { success = onParsed(dupWarning.formData, "new"); }
+    
+    if (success) {
+      setDupWarning(null); 
+      advanceReview(parsedResults, currentIdx + 1);
+    }
   };
 
   return (
@@ -375,10 +385,10 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
           onDragOver={(e) => { e.preventDefault(); dropRef.current?.classList.add("border-indigo-500"); }}
           onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
           onClick={() => fileRef.current?.click()}
-          className="border-2 border-dashed border-[#1F2937] rounded-xl p-8 text-center cursor-pointer hover:border-indigo-500 transition-colors"
+          className="border-2 border-dashed border-token rounded-xl p-8 text-center cursor-pointer hover:border-indigo-500 transition-colors"
         >
-          <Upload className="mx-auto mb-3 text-gray-600" size={32} />
-          <p className="text-gray-300 font-medium text-sm">Drop PDF shipping labels here</p>
+          <Upload className="mx-auto mb-3 opacity-30" size={32} style={{ color: 'var(--text)' }} />
+          <p className="font-medium text-sm" style={{ color: 'var(--text)' }}>Drop PDF shipping labels here</p>
           <p className="text-xs text-indigo-400 mt-2 flex items-center justify-center gap-1"><Camera size={11} /> Camera supported on mobile</p>
           <input ref={fileRef} type="file" accept="image/*,application/pdf" capture="environment" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
         </div>
@@ -386,12 +396,12 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
       {queue.length > 0 && (
         <div className="space-y-2">
           {queue.map((item, i) => (
-            <div key={i} className="bg-[#0B0F1A] rounded-xl p-3 border border-[#1F2937]">
+            <div key={i} className="bg-subtle rounded-xl p-3 border border-token">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-300 truncate max-w-[200px]">{item.name}</span>
-                <span className="text-[10px] text-gray-500">{item.status}</span>
+                <span className="text-xs truncate max-w-[200px]" style={{ color: 'var(--text)' }}>{item.name}</span>
+                <span className="text-[10px] opacity-40" style={{ color: 'var(--text)' }}>{item.status}</span>
               </div>
-              <div className="h-1 bg-[#1F2937] rounded-full overflow-hidden">
+              <div className="h-1 bg-token rounded-full overflow-hidden">
                 <div className="h-full bg-indigo-500 transition-all" style={{ width: `${item.progress}%` }} />
               </div>
             </div>
@@ -411,10 +421,10 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
       {dupWarning && (
         <Modal open title="Duplicate Detected" onClose={() => setDupWarning(null)} size="max-w-sm">
           <div className="space-y-4">
-            <p className="text-sm text-gray-400">An order with this number already exists. Replace it?</p>
+            <p className="text-sm opacity-60" style={{ color: 'var(--text)' }}>An order with this number already exists. Replace it?</p>
             <div className="flex gap-3">
-              <button onClick={() => handleDup("update")} className="flex-1 py-2 bg-indigo-600 rounded-lg text-sm font-bold">Replace</button>
-              <button onClick={() => handleDup("new")} className="flex-1 py-2 bg-[#1F2937] rounded-lg text-sm font-bold">New</button>
+              <button onClick={() => handleDup("update")} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold">Replace</button>
+              <button onClick={() => handleDup("new")} className="flex-1 py-2 bg-subtle border border-token rounded-lg text-sm font-bold" style={{ color: 'var(--text)' }}>New</button>
             </div>
           </div>
         </Modal>
@@ -425,21 +435,24 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
 
 // ─── ORDER DETAIL MODAL ───────────────────────────────────────────────────────
 
-function OrderDetailModal({ order, onClose, onEdit, onDelete, onAddNote, onToggleStar }: {
+function OrderDetailModal({ order, onClose, onEdit, onDelete, onAddNote, onToggleStar, onUpdateStatus }: {
   order: Order; onClose: () => void; onEdit: () => void;
   onDelete: (id: string) => void; onAddNote: (id: string, text: string) => void; onToggleStar: (id: string) => void;
+  onUpdateStatus: (ids: string[], s: Order["status"]) => void;
 }) {
   const [newNote, setNewNote] = useState("");
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
   const trackUrl = COURIER_TRACKING[order.courierPartner]?.(order.courierAWB);
   const STATUS_STEPS = ["Processing", "Packed", "Dispatched", "Delivered"];
   const curStep = STATUS_STEPS.indexOf(order.status);
   const overdue = isOverdue(order);
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}#/track/${order.orderNumber}` : "";
   const submitNote = () => { if (!newNote.trim()) return; onAddNote(order.id, newNote.trim()); setNewNote(""); };
+  const handlePrint = () => { if (order.labelBase64) window.open(`data:${order.labelMimeType};base64,${order.labelBase64}`, "_blank"); };
 
   return (
     <Modal open onClose={onClose} title={order.orderNumber} size="max-w-2xl">
-      <div className="space-y-6 text-white">
+      <div className="space-y-6" style={{ color: 'var(--text)' }}>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-0">
           {STATUS_STEPS.map((s, i) => (
             <div key={s} className="flex flex-row sm:flex-1 items-center gap-3 sm:gap-0">
@@ -448,7 +461,7 @@ function OrderDetailModal({ order, onClose, onEdit, onDelete, onAddNote, onToggl
                   ${i < curStep ? "bg-emerald-500 text-white" : i === curStep ? "bg-indigo-600 text-white ring-4 ring-indigo-600/20" : "bg-[#1F2937] text-gray-600"}`}>
                   {i < curStep ? <CheckCircle size={14} /> : i + 1}
                 </div>
-                <span className={`text-xs sm:text-[10px] sm:mt-1 font-medium whitespace-nowrap ${i <= curStep ? "text-gray-300" : "text-gray-600"}`}>{s}</span>
+                <span className={`text-xs sm:text-[10px] sm:mt-1 font-medium whitespace-nowrap ${i <= curStep ? "opacity-100" : "opacity-40"}`} style={{ color: 'var(--text)' }}>{s}</span>
               </div>
               {i < STATUS_STEPS.length - 1 && <div className={`hidden sm:block h-px flex-1 mb-4 mx-1 ${i < curStep ? "bg-emerald-500" : "bg-[#1F2937]"}`} />}
             </div>
@@ -456,18 +469,37 @@ function OrderDetailModal({ order, onClose, onEdit, onDelete, onAddNote, onToggl
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
           {[ ["Product", order.productName], ["SKU", order.sku], ["Amount", fmtCurrency(order.amount)], ["Customer", order.customerName], ["Courier", order.courierPartner], ["AWB", order.courierAWB] ].map(([k, v]) => (
-            <div key={k}><p className="text-xs text-gray-500 mb-0.5">{k}</p><p className="text-gray-200 font-medium break-words">{v}</p></div>
+            <div key={k}><p className="text-xs opacity-50 mb-0.5" style={{ color: 'var(--text)' }}>{k}</p><p className="font-medium break-words" style={{ color: 'var(--text)' }}>{v}</p></div>
           ))}
-          <div className="sm:col-span-2"><p className="text-xs text-gray-500 mb-0.5">Address</p><p className="text-gray-200 text-xs">{order.deliveryAddress}</p></div>
+          <div className="sm:col-span-2"><p className="text-xs opacity-50 mb-0.5" style={{ color: 'var(--text)' }}>Address</p><p className="text-xs" style={{ color: 'var(--text)' }}>{order.deliveryAddress}</p></div>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-[#0B0F1A] border border-[#1F2937] rounded-xl px-3 py-2">
-          <input readOnly value={shareUrl} className="flex-1 text-[10px] bg-transparent text-gray-600 font-mono truncate outline-none" />
-          <button onClick={() => { navigator.clipboard?.writeText(shareUrl); }} className="text-xs font-bold text-accent">Copy Link</button>
+        
+        <div className="relative">
+          <button onClick={() => setShowStatusMenu(!showStatusMenu)} className="w-full py-2 bg-subtle border border-token rounded-xl text-xs font-bold flex items-center justify-center gap-2">
+            Update Status: <StatusBadge status={order.status} /> <ChevronDown size={14} />
+          </button>
+          {showStatusMenu && (
+            <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-card border border-token rounded-xl shadow-2xl z-50 grid grid-cols-2 gap-2">
+              {ORDER_STATUSES.map(s => (
+                <button key={s} onClick={() => { onUpdateStatus([order.id], s as Order["status"]); setShowStatusMenu(false); }} className="px-3 py-2 text-[10px] font-bold bg-subtle hover:bg-indigo-500 hover:text-white rounded-lg transition-colors">
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button onClick={onEdit} className="flex-1 py-3 sm:py-2 bg-indigo-600 rounded-xl font-bold text-sm">Edit</button>
-          <button onClick={() => onToggleStar(order.id)} className="flex-1 py-3 sm:py-2 border border-[#1F2937] rounded-xl text-sm">{order.starred ? "Unstar" : "Star"}</button>
-          <button onClick={() => { if (confirm("Delete?")) { onDelete(order.id); onClose(); } }} className="flex-1 py-3 sm:py-2 bg-red-500/10 text-red-400 rounded-xl text-sm">Delete</button>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-subtle border border-token rounded-xl px-3 py-2">
+          <input readOnly value={shareUrl} className="flex-1 text-[10px] bg-transparent font-mono truncate outline-none opacity-60" style={{ color: 'var(--text)' }} />
+          <button onClick={() => { navigator.clipboard?.writeText(shareUrl); }} className="text-xs font-bold text-indigo-500">Copy Link</button>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button onClick={onEdit} className="flex-1 min-w-[120px] py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm">Edit</button>
+          <button onClick={() => onToggleStar(order.id)} className="flex-1 min-w-[120px] py-2.5 border border-token rounded-xl text-sm font-bold" style={{ color: 'var(--text)' }}>{order.starred ? "Unstar" : "Star"}</button>
+          {order.labelBase64 && (
+            <button onClick={handlePrint} className="flex-1 min-w-[120px] py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2"><Printer size={16} /> Print PDF</button>
+          )}
+          <button onClick={() => { if (confirm("Delete?")) { onDelete(order.id); onClose(); } }} className="flex-1 min-w-[120px] py-2.5 bg-red-500/10 text-red-500 rounded-xl text-sm font-bold">Delete</button>
         </div>
       </div>
     </Modal>
@@ -719,18 +751,21 @@ export default function SalesTrackerApp() {
   }, []);
   const removeToast = useCallback((id: string) => setToasts(p => p.filter(x => x.id !== id)), []);
 
-  const handleAddOrder = (f: Partial<Order>, isEdit = false, id?: string) => { 
+  const handleAddOrder = (f: Partial<Order>, isEdit = false, id?: string, shouldClose = true) => { 
     if (!f.customerName || !f.productName || !f.amount) {
       addToast("Required: Name, Product, Amount", "warning");
-      return;
+      return false;
     }
     addOrder(f, isEdit, id); 
     addToast(isEdit ? "Updated" : "Added", "success"); 
-    setModal(null); 
+    if (shouldClose) setModal(null);
+    return true;
   };
   const handleDeleteOrder = (id: string) => { deleteOrder(id); addToast("Deleted", "delete"); };
   const handlePrintLabel = (o: Order) => { if (o.labelBase64) window.open(`data:${o.labelMimeType};base64,${o.labelBase64}`, "_blank"); };
-  const handleParsed = (d: Partial<Order>, a: "new"|"update", id?: string) => { handleAddOrder(d, a === "update", id); };
+  const handleParsed = (d: Partial<Order>, a: "new"|"update", id?: string) => { 
+    return handleAddOrder(d, a === "update", id, false); 
+  };
 
   const filteredOrders = useMemo(() => {
     let res = [...orders];
@@ -947,7 +982,15 @@ export default function SalesTrackerApp() {
         </Modal>
       )}
       {modal?.type === 'view' && activeOrder && (
-        <OrderDetailModal order={activeOrder} onClose={() => setModal(null)} onEdit={() => setModal({ type: 'edit', data: activeOrder.id })} onDelete={handleDeleteOrder} onAddNote={addNote} onToggleStar={toggleStar} />
+        <OrderDetailModal 
+          order={activeOrder} 
+          onClose={() => setModal(null)} 
+          onEdit={() => setModal({ type: 'edit', data: activeOrder.id })} 
+          onDelete={handleDeleteOrder} 
+          onAddNote={addNote} 
+          onToggleStar={toggleStar} 
+          onUpdateStatus={updateStatus}
+        />
       )}
       <Modal open={modal?.type === 'upload'} title="AI Label Reader" onClose={() => setModal(null)} size="max-w-xl">
         <PDFUploader existingOrders={orders} onParsed={handleParsed} addToast={addToast} onClose={() => setModal(null)} />
