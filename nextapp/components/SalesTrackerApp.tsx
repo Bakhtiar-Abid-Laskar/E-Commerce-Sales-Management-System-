@@ -1046,10 +1046,10 @@ export default function SalesTrackerApp() {
   const removeToast = useCallback((id: string) => setToasts((p) => p.filter((t) => t.id !== id)), []);
 
   // Order actions
-  const handleAddOrder = useCallback((form: Partial<Order>, isEdit = false, editId?: string) => {
+  const handleAddOrder = useCallback((form: Partial<Order>, isEdit = false, editId?: string, closeModal = true) => {
     addOrder(form, isEdit, editId);
     addToast(isEdit ? "Order updated" : "Order added", "success");
-    setModal(null);
+    if (closeModal) setModal(null);
   }, [addOrder, addToast]);
 
   const handleDeleteOrder = useCallback((id: string) => {
@@ -1095,8 +1095,8 @@ export default function SalesTrackerApp() {
   }, [addToast]);
 
   const handleParsed = useCallback((formData: Partial<Order>, action: "new"|"update", existingId?: string) => {
-    if (action === "update" && existingId) handleAddOrder(formData, true, existingId);
-    else handleAddOrder(formData, false);
+    if (action === "update" && existingId) handleAddOrder(formData, true, existingId, false);
+    else handleAddOrder(formData, false, undefined, false);
   }, [handleAddOrder]);
 
   // Filtering + sorting
