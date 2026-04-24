@@ -210,7 +210,7 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
       .map(d => ({
         ...d,
         displayDate: new Date(d.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
-        avgValue: d.orders ? d.revenue / d.orders : 0
+        avgValue: d.orders ? Math.round(d.revenue / d.orders) : 0
       }));
 
     // Add 7-day moving average & cumulative
@@ -346,13 +346,13 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex bg-subtle p-1 rounded-xl border border-token shadow-inner">
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-1">
+          <div className="flex bg-subtle p-1 rounded-xl border border-token shadow-inner shrink-0">
             {(["Today", "7D", "30D", "90D", "1Y"] as DateRange[]).map((t) => (
               <button 
                 key={t}
                 onClick={() => setRange(t)}
-                className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all ${
+                className={`px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-lg transition-all ${
                   range === t ? "bg-card text-accent shadow-sm" : "text-muted hover:text-main"
                 }`}
               >
@@ -361,26 +361,22 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
             ))}
           </div>
 
-          <div className="h-8 w-px bg-token mx-1" />
+          <div className="h-8 w-px bg-token mx-1 shrink-0" />
 
           <button 
             onClick={() => setCompare(!compare)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
               compare ? "border-indigo-500/50 bg-indigo-500/5 text-indigo-500" : "border-token text-muted"
             }`}
           >
-            Compare Mode <div className={`w-8 h-4 rounded-full relative transition-all ${compare ? "bg-indigo-500" : "bg-muted/30"}`}>
+            <span className="hidden xs:inline">Compare</span> <div className={`w-8 h-4 rounded-full relative transition-all ${compare ? "bg-indigo-500" : "bg-muted/30"}`}>
               <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${compare ? "right-0.5" : "left-0.5"}`} />
             </div>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button onClick={exportCSV} className="p-2.5 rounded-xl btn-ghost group hover:text-indigo-500">
                 <Download size={18} className="group-hover:translate-y-0.5 transition-transform" />
-            </button>
-            <button onClick={() => setLastUpdated(new Date())} className="flex items-center gap-2 px-3 py-2 rounded-xl btn-ghost text-[10px] font-black uppercase tracking-widest group">
-                <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
-                <span className="hidden sm:inline">Last Sync: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </button>
           </div>
         </div>
@@ -428,35 +424,88 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--divider)" />
                   <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-sub)', fontSize: 10, fontWeight: 700 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-sub)', fontSize: 10, fontWeight: 700 }} tickFormatter={(v) => activeRevenueTab === "Revenue" ? `₹${v >= 1000 ? (v/1000).toFixed(1)+'k' : v}` : v} />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '16px', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', padding: '12px' }} itemStyle={{ fontSize: '12px', fontWeight: 800 }} />
-                  <Area type="monotone" dataKey={activeRevenueTab === "Revenue" ? "revenue" : activeRevenueTab === "Order Count" ? "orders" : "avgValue"} stroke={COLORS.primary} strokeWidth={4} fillOpacity={1} fill="url(#colorRev)" />
-                  <Line type="monotone" dataKey="ma" stroke={COLORS.primary} strokeWidth={2} strokeDasharray="8 4" dot={false} opacity={0.6} name="7D Moving Average" />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-sub)', fontSize: 10, fontWeight: 700 }} tickFormatter={(v) => {
+                    if (activeRevenueTab === "Revenue") return `₹${v >= 1000 ? (v/1000).toFixed(1)+'k' : v}`;
+                    if (activeRevenueTab === "Order Count") return `${v}`;
+                    if (activeRevenueTab === "Avg Value") return `₹${v >= 1000 ? (v/1000).toFixed(1)+'k' : v}`;
+                    return v;
+                  }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '16px', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', padding: '12px' }} 
+                    itemStyle={{ fontSize: '12px', fontWeight: 800 }}
+                    formatter={(value) => {
+                      if (activeRevenueTab === "Revenue") return `₹${Number(value).toLocaleString()}`;
+                      return Number(value);
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey={activeRevenueTab === "Revenue" ? "revenue" : activeRevenueTab === "Order Count" ? "orders" : "avgValue"} 
+                    stroke={COLORS.primary} 
+                    strokeWidth={4} 
+                    fillOpacity={1} 
+                    fill="url(#colorRev)" 
+                    name={activeRevenueTab}
+                  />
+                  {compare && <Line type="monotone" dataKey="ma" stroke={COLORS.primary} strokeWidth={2} strokeDasharray="8 4" dot={false} opacity={0.6} name="7D Moving Average" />}
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10 pt-10 border-t border-token">
               <div className="group cursor-default">
-                <p className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-2">Peak Revenue Day</p>
+                <p className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-2">
+                  {activeRevenueTab === "Revenue" ? "Peak Revenue Day" : activeRevenueTab === "Order Count" ? "Peak Orders Day" : "Peak Avg Value Day"}
+                </p>
                 <div className="flex items-center gap-3">
-                    <div className="text-xl font-black">{dailyData.length ? dailyData.sort((a,b) => b.revenue - a.revenue)[0].displayDate : "N/A"}</div>
-                    <div className="text-sm font-bold text-accent">₹{dailyData.length ? dailyData.sort((a,b) => b.revenue - a.revenue)[0].revenue.toLocaleString() : 0}</div>
+                    <div className="text-xl font-black">{
+                      dailyData.length ? dailyData.sort((a,b) => 
+                        activeRevenueTab === "Revenue" ? b.revenue - a.revenue : 
+                        activeRevenueTab === "Order Count" ? b.orders - a.orders :
+                        b.avgValue - a.avgValue
+                      )[0].displayDate : "N/A"
+                    }</div>
+                    <div className="text-sm font-bold text-accent">{
+                      dailyData.length ? (activeRevenueTab === "Revenue" ? 
+                        `₹${dailyData.sort((a,b) => b.revenue - a.revenue)[0].revenue.toLocaleString()}` : 
+                        activeRevenueTab === "Order Count" ? 
+                        `${dailyData.sort((a,b) => b.orders - a.orders)[0].orders} orders` :
+                        `₹${dailyData.sort((a,b) => b.avgValue - a.avgValue)[0].avgValue}`
+                      ) : 0
+                    }</div>
                 </div>
               </div>
               <div className="group cursor-default">
-                <p className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-2">Daily Velocity</p>
+                <p className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-2">
+                  {activeRevenueTab === "Revenue" ? "Daily Velocity" : activeRevenueTab === "Order Count" ? "Daily Avg Orders" : "Avg Order Value"}
+                </p>
                 <div className="flex items-center gap-3">
-                    <div className="text-xl font-black">{fmtCurrency(kpis.revPerDay.val)}</div>
+                    <div className="text-xl font-black">{
+                      activeRevenueTab === "Revenue" ? fmtCurrency(kpis.revPerDay.val) :
+                      activeRevenueTab === "Order Count" ? Math.round(kpis.orders.val / (dailyData.length || 1)) :
+                      fmtCurrency(kpis.avgValue.val)
+                    }</div>
                     <div className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500">STABLE</div>
                 </div>
               </div>
               <div className="group cursor-default">
-                <p className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-2">Rev. Growth Rate</p>
+                <p className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-2">
+                  {activeRevenueTab === "Revenue" ? "Rev. Growth Rate" : "Growth Rate"}
+                </p>
                 <div className="flex items-center gap-3">
-                    <div className="text-xl font-black">{kpis.revenue.trend.val}</div>
-                    <div className={`text-[10px] font-black px-1.5 py-0.5 rounded ${kpis.revenue.trend.type === "up" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>
-                        {kpis.revenue.trend.type === "up" ? "ACCELERATING" : "DECLINING"}
+                    <div className="text-xl font-black">{
+                      activeRevenueTab === "Revenue" ? kpis.revenue.trend.val :
+                      activeRevenueTab === "Order Count" ? kpis.orders.trend.val :
+                      kpis.avgValue.trend.val
+                    }</div>
+                    <div className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                      (activeRevenueTab === "Revenue" ? kpis.revenue.trend.type : 
+                       activeRevenueTab === "Order Count" ? kpis.orders.trend.type :
+                       kpis.avgValue.trend.type) === "up" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                    }`}>
+                        {(activeRevenueTab === "Revenue" ? kpis.revenue.trend.type : 
+                          activeRevenueTab === "Order Count" ? kpis.orders.trend.type :
+                          kpis.avgValue.trend.type) === "up" ? "ACCELERATING" : "DECLINING"}
                     </div>
                 </div>
               </div>
@@ -548,7 +597,8 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
 
           {productTab === "performance" && (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left border-separate border-spacing-y-2">
+              {/* Desktop Table */}
+              <table className="hidden md:table w-full text-sm text-left border-separate border-spacing-y-2">
                 <thead>
                   <tr className="text-muted text-[10px] font-black uppercase tracking-[0.2em]">
                     <th className="px-4 pb-4">Rank</th>
@@ -586,6 +636,36 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
                   })}
                 </tbody>
               </table>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
+                {skuPerformance.slice(0, 8).map((sku, i) => {
+                  const share = (sku.revenue / (kpis.revenue.val || 1)) * 100;
+                  return (
+                    <div key={sku.sku} className="bg-subtle/30 border border-token rounded-2xl p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[10px] font-black text-muted italic">#{i+1}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black">ACTIVE</span>
+                      </div>
+                      <h4 className="font-bold text-main text-sm mb-1">{sku.name}</h4>
+                      <p className="font-mono text-xs text-muted mb-3">{sku.sku}</p>
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-[10px] font-black text-muted uppercase mb-1">Volume</p>
+                          <p className="text-sm font-black">{sku.qty} orders</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-black text-muted uppercase mb-1">Revenue</p>
+                          <p className="text-sm font-black text-accent">{fmtCurrency(sku.revenue)}</p>
+                          <div className="w-20 h-1 bg-token rounded-full mt-1 overflow-hidden ml-auto">
+                            <div className="h-full bg-accent" style={{ width: `${share}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -785,7 +865,7 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
         {/* ── SECTION 8: AI INSIGHTS FEED ── */}
         <section>
              <SectionTitle title="Smart AI Insights" sub="Heuristic analysis of your current sales and operational data" />
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {insights.map((insight, i) => (
                     <div key={i} className="p-6 rounded-3xl border card-token theme-transition flex flex-col gap-4 group hover:scale-[1.02] shadow-sm" style={{ borderTop: `4px solid ${insight.color}` }}>
                         <div className="flex items-center justify-between">
@@ -810,21 +890,23 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
 
         {/* ── SECTION 9: FULL ORDER AUDIT TABLE ── */}
         <section className="rounded-3xl border card-token theme-transition overflow-hidden">
-            <div className="p-8 border-b border-token flex items-center justify-between">
+            <div className="p-6 sm:p-8 border-b border-token flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h3 className="text-xl font-black" style={{ color: "var(--text)" }}>Complete Order Ledger</h3>
                     <p className="text-sm text-muted">Detailed audit trail of all orders in current period</p>
                 </div>
-                <div className="flex items-center gap-3">
-                   <div className="relative">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                   <div className="relative flex-1 sm:flex-none">
                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-                       <input placeholder="Search audit trail..." className="pl-9 pr-4 py-2 text-xs rounded-xl bg-subtle/50 border border-token focus:outline-none focus:ring-2 focus:ring-accent" />
+                       <input placeholder="Search audit trail..." className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-subtle/50 border border-token focus:outline-none focus:ring-2 focus:ring-accent" />
                    </div>
                    <button className="p-2 rounded-xl btn-ghost"><Filter size={16} /></button>
                 </div>
             </div>
+            
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
+                {/* Desktop Ledger Table */}
+                <table className="hidden md:table w-full text-sm text-left">
                     <thead className="bg-subtle/30 text-muted text-[10px] font-black uppercase tracking-widest">
                         <tr>
                             <th className="px-8 py-5">Order ID</th>
@@ -860,9 +942,38 @@ export default function AnalyticsDashboard({ open, onClose, orders, darkMode }: 
                         ))}
                     </tbody>
                 </table>
+
+                {/* Mobile Ledger Cards */}
+                <div className="md:hidden divide-y divide-token">
+                  {orderAudit.map((o) => (
+                    <div key={o.id} className="p-5 hover:bg-subtle/30 transition-colors">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-black font-mono text-xs text-main">{o.orderNumber}</p>
+                          <p className="text-[10px] text-muted font-bold mt-0.5">{new Date(o.date).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black border" style={{ 
+                            backgroundColor: `${STATUS_COLORS[o.status] || COLORS.primary}10`,
+                            color: STATUS_COLORS[o.status] || COLORS.primary,
+                            borderColor: `${STATUS_COLORS[o.status] || COLORS.primary}30`
+                        }}>
+                            {o.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-end">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-main truncate">{o.customerName}</p>
+                          <p className="text-[10px] text-muted truncate mt-0.5">{o.productName}</p>
+                        </div>
+                        <p className="text-base font-black text-main ml-4">{fmtCurrency(Number(o.amount || 0))}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
             </div>
-            <div className="p-6 bg-subtle/20 border-t border-token flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-muted">
-                <div className="flex gap-6">
+
+            <div className="p-6 bg-subtle/20 border-t border-token flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">
+                <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
                     <span>Total: {currentOrders.length} Orders</span>
                     <span>Revenue: {fmtCurrency(kpis.revenue.val)}</span>
                     <span>Avg Ticket: {fmtCurrency(kpis.avgValue.val)}</span>

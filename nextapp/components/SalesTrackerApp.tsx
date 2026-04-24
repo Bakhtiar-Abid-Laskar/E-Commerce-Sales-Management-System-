@@ -12,13 +12,15 @@ import {
   TrendingUp, AlertCircle, MoreHorizontal,
   RotateCcw, Home, Zap, Camera, Hash, Share2,
   MapPin, Phone, User, CreditCard, Calendar, Weight as WeightIcon,
-  CheckSquare, XCircle, LogOut,
+  CheckSquare, XCircle, LogOut, ExternalLink as ExternalLinkIcon,
 } from "lucide-react";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useSalesStore, hydrateStore } from "@/lib/store";
 import type { Order, FilterPreset } from "@/lib/store";
+
+type Filters = Record<string, unknown>;
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -209,7 +211,7 @@ function OrderForm({ initial, onSave, onCancel, isEdit }: {
 
   return (
     <div className="space-y-5 text-white">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><Label text="Product Name" /><input className={inp} value={form.productName || ""} onChange={(e) => f("productName", e.target.value)} placeholder="Sony WH-1000XM5" /></div>
         <div><Label text="SKU" /><input className={inp} value={form.sku || ""} onChange={(e) => f("sku", e.target.value)} placeholder="SON-WH-XM5-BLK" /></div>
         <div><Label text="Invoice No." /><input className={inp} value={form.invoiceNumber || ""} onChange={(e) => f("invoiceNumber", e.target.value)} placeholder="INV-2024-XXXX" /></div>
@@ -218,21 +220,21 @@ function OrderForm({ initial, onSave, onCancel, isEdit }: {
         <div><Label text="Weight" /><input className={inp} value={form.weight || ""} onChange={(e) => f("weight", e.target.value)} placeholder="500g" /></div>
       </div>
       <div className="h-px bg-[#1F2937]" />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><Label text="Customer Name" /><input className={inp} value={form.customerName || ""} onChange={(e) => f("customerName", e.target.value)} placeholder="Full name" /></div>
         <div><Label text="Phone (optional)" /><input className={inp} value={form.customerPhone || ""} onChange={(e) => f("customerPhone", e.target.value)} placeholder="10-digit" /></div>
       </div>
       <div><Label text="Delivery Address" /><textarea className={inp + " resize-none"} rows={2} value={form.deliveryAddress || ""} onChange={(e) => f("deliveryAddress", e.target.value)} placeholder="Full delivery address" /></div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div><Label text="Pincode" /><input className={inp} value={form.pincode || ""} onChange={(e) => f("pincode", e.target.value)} maxLength={6} /></div>
         <div><Label text="Courier" /><select className={sel} value={form.courierPartner || "Delhivery"} onChange={(e) => f("courierPartner", e.target.value)}>{COURIERS.map((c) => <option key={c}>{c}</option>)}</select></div>
         <div><Label text="AWB No." /><input className={inp} value={form.courierAWB || ""} onChange={(e) => f("courierAWB", e.target.value)} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><Label text="Order Date" /><input className={inp} type="date" value={form.date || ""} onChange={(e) => f("date", e.target.value)} /></div>
         <div><Label text="Expected Delivery" /><input className={inp} type="date" value={form.expectedDeliveryDate || ""} onChange={(e) => f("expectedDeliveryDate", e.target.value)} /></div>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div><Label text="Order Type" /><select className={sel} value={form.orderType || "Standard"} onChange={(e) => f("orderType", e.target.value as Order["orderType"])}>{ORDER_TYPES.map((t) => <option key={t}>{t}</option>)}</select></div>
         <div><Label text="Status" /><select className={sel} value={form.status || "Processing"} onChange={(e) => f("status", e.target.value as Order["status"])}>{ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}</select></div>
         <div><Label text="Priority" /><select className={sel} value={form.priority || "Normal"} onChange={(e) => f("priority", e.target.value as Order["priority"])}>{PRIORITIES.map((p) => <option key={p}>{p}</option>)}</select></div>
@@ -272,9 +274,7 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
 }) {
   const [queue, setQueue] = useState<QItem[]>([]);
   const [parsing, setParsing] = useState(false);
-  // All successfully-parsed results — populated after EVERY file has been processed
   const [parsedResults, setParsedResults] = useState<{ data: Partial<Order>; fileName: string }[]>([]);
-  // Index into parsedResults for the current review step (null = not yet reviewing)
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const [reviewModal, setReviewModal] = useState<{ data: Partial<Order>; fileName: string } | null>(null);
   const [dupWarning, setDupWarning] = useState<{ formData: Partial<Order>; dupOrder: Order } | null>(null);
@@ -289,11 +289,7 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
     if (!files) return;
     const valid = Array.from(files).filter((f) => f.type === "application/pdf" || f.name.endsWith(".pdf") || f.type.startsWith("image/"));
     if (!valid.length) { addToast("Please upload PDF or image files", "error"); return; }
-    // Reset everything when the user picks new files
-    setParsedResults([]);
-    setReviewIndex(null);
-    setReviewModal(null);
-    setDupWarning(null);
+    setParsedResults([]); setReviewIndex(null); setReviewModal(null); setDupWarning(null);
     setQueue(valid.map((f) => ({ file: f, name: f.name, status: "pending", result: null, error: null, progress: 0 })));
   };
 
@@ -311,251 +307,111 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
     });
     const json = await res.json();
     if (!res.ok || json.error) throw new Error(json.error || "Parse failed");
-
-    return {
-      data: { ...json.data, labelBase64: b64, labelMimeType: mimeType } as Partial<Order>,
-      base64: b64,
-      mimeType,
-    };
+    return { data: { ...json.data, labelBase64: b64, labelMimeType: mimeType } as Partial<Order>, base64: b64, mimeType };
   };
 
-  const runWithConcurrency = async <T,>(items: T[], limit: number, worker: (item: T, index: number) => Promise<void>) => {
-    let nextIndex = 0;
-    const active = new Set<Promise<void>>();
-
-    const schedule = () => {
-      if (nextIndex >= items.length) return;
-      const index = nextIndex++;
-      const task = worker(items[index], index).finally(() => {
-        active.delete(task);
-      });
-      active.add(task);
-    };
-
-    while (nextIndex < items.length || active.size > 0) {
-      while (nextIndex < items.length && active.size < limit) {
-        schedule();
-      }
-
-      if (active.size === 0) break;
-
-      await Promise.race(active);
-    }
-  };
-
-  // ── STEP 1: Parse ALL files first, collect results ────────────────────────────
   const startParsing = async () => {
     if (!queue.length) return;
     setParsing(true);
     const updated = [...queue];
     const results: Array<{ data: Partial<Order>; fileName: string } | null> = Array(updated.length).fill(null);
-
-    await runWithConcurrency(updated, PARSE_CONCURRENCY, async (item, index) => {
-      updateQueueItem(index, { status: "parsing", progress: 25 });
-      try {
-        updateQueueItem(index, { progress: 40 });
-        const { data: dataWithLabel, base64, mimeType } = await parseFile(item.file);
-        updateQueueItem(index, { status: "done", progress: 100, result: dataWithLabel, base64 });
-        results[index] = { data: dataWithLabel, fileName: item.name };
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        updateQueueItem(index, { status: "failed", progress: 100, error: msg });
-        addToast(`Failed to parse "${item.name}": ${msg}`, "error");
-      }
-    });
-
+    let nextIndex = 0;
+    const active = new Set<Promise<void>>();
+    const schedule = () => {
+      if (nextIndex >= updated.length) return;
+      const index = nextIndex++;
+      const task = (async () => {
+        updateQueueItem(index, { status: "parsing", progress: 25 });
+        try {
+          const { data, base64 } = await parseFile(updated[index].file);
+          updateQueueItem(index, { status: "done", progress: 100, result: data, base64 });
+          results[index] = { data, fileName: updated[index].name };
+        } catch (err: any) {
+          updateQueueItem(index, { status: "failed", progress: 100, error: err.message });
+          addToast(`Failed: ${updated[index].name}`, "error");
+        }
+      })().finally(() => active.delete(task));
+      active.add(task);
+    };
+    while (nextIndex < updated.length || active.size > 0) {
+      while (nextIndex < updated.length && active.size < PARSE_CONCURRENCY) schedule();
+      if (active.size === 0) break;
+      await Promise.race(active);
+    }
     setParsing(false);
-
-    // ── STEP 2: Extract only successful results while maintaining order ─────
-    const successfulResults: { data: Partial<Order>; fileName: string }[] = [];
-    for (const item of results) {
-      if (item !== null) {
-        successfulResults.push(item);
-      }
-    }
-
-    if (successfulResults.length > 0) {
-      setParsedResults(successfulResults);
-      setReviewIndex(0);
-      setReviewModal(successfulResults[0]);
-    } else {
-      addToast("No files could be parsed successfully", "warning");
-    }
+    const success = results.filter((r): r is { data: Partial<Order>; fileName: string } => r !== null);
+    if (success.length) { setParsedResults(success); setReviewIndex(0); setReviewModal(success[0]); }
+    else addToast("No files parsed successfully", "warning");
   };
 
-  // ── Advance to the next review item ───────────────────────────────────────────
   const advanceReview = (results: { data: Partial<Order>; fileName: string }[], nextIdx: number) => {
-    if (nextIdx < results.length) {
-      setReviewIndex(nextIdx);
-      setReviewModal(results[nextIdx]);
-    } else {
-      setReviewIndex(null);
-      setReviewModal(null);
-      addToast(`All ${results.length} file${results.length > 1 ? "s" : ""} reviewed ✓`, "success");
-    }
+    if (nextIdx < results.length) { setReviewIndex(nextIdx); setReviewModal(results[nextIdx]); }
+    else { setReviewIndex(null); setReviewModal(null); addToast("All reviewed ✓", "success"); }
   };
 
-  // ── User confirms/edits a parsed result ─────────────────────────────────────
   const handleReviewSave = (formData: Partial<Order>) => {
     const currentIdx = reviewIndex ?? 0;
-    const dup = existingOrders.find(
-      (o) => (formData.orderNumber && o.orderNumber === formData.orderNumber) ||
-              (formData.courierAWB && o.courierAWB === formData.courierAWB)
-    );
-    if (dup) {
-      // Pause review, show dup modal — review resumes after dup is resolved
-      setReviewModal(null);
-      setDupWarning({ formData, dupOrder: dup });
-    } else {
-      onParsed(formData, "new");
-      addToast(`"${parsedResults[currentIdx]?.fileName}" added ✓`, "success");
-      // Advance to next without clearing reviewModal first to prevent flicker/unmount
-      advanceReview(parsedResults, currentIdx + 1);
-    }
+    const dup = existingOrders.find((o) => (formData.orderNumber && o.orderNumber === formData.orderNumber) || (formData.courierAWB && o.courierAWB === formData.courierAWB));
+    if (dup) { setReviewModal(null); setDupWarning({ formData, dupOrder: dup }); }
+    else { onParsed(formData, "new"); addToast("Added ✓", "success"); advanceReview(parsedResults, currentIdx + 1); }
   };
 
-  // ── User skips a review (Cancel / X) ─────────────────────────────────────────
-  const handleReviewSkip = () => {
-    const currentIdx = reviewIndex ?? 0;
-    addToast(`Skipped "${parsedResults[currentIdx]?.fileName}"`, "info");
-    advanceReview(parsedResults, currentIdx + 1);
-  };
+  const handleReviewSkip = () => { const idx = reviewIndex ?? 0; advanceReview(parsedResults, idx + 1); };
 
-  // ── Duplicate resolution — ALWAYS advances to next file ───────────────────────
   const handleDup = (action: "update" | "new" | "discard") => {
     if (!dupWarning) return;
-    const currentIdx = reviewIndex ?? 0;
-    if (action === "update") {
-      onParsed(dupWarning.formData, "update", dupWarning.dupOrder.id);
-      addToast(`Updated existing order ${dupWarning.dupOrder.orderNumber} ✓`, "success");
-    } else if (action === "new") {
-      onParsed(dupWarning.formData, "new");
-      addToast("Added as new order ✓", "success");
-    } else {
-      addToast("Duplicate skipped", "info");
-    }
-    setDupWarning(null);
-    // Always continue to next PDF regardless of which action was chosen
-    advanceReview(parsedResults, currentIdx + 1);
+    if (action === "update") { onParsed(dupWarning.formData, "update", dupWarning.dupOrder.id); addToast("Updated ✓", "success"); }
+    else if (action === "new") { onParsed(dupWarning.formData, "new"); addToast("Added new ✓", "success"); }
+    setDupWarning(null); advanceReview(parsedResults, (reviewIndex ?? 0) + 1);
   };
-
-  const statusColor: Record<string, string> = { pending: "bg-gray-700", parsing: "bg-indigo-500", done: "bg-emerald-500", failed: "bg-red-500" };
-  const doneCount = queue.filter((q) => q.status === "done").length;
-  const failCount = queue.filter((q) => q.status === "failed").length;
-  const allParsed = queue.length > 0 && queue.every((q) => q.status === "done" || q.status === "failed");
 
   return (
     <div className="space-y-4">
-
-      {/* Drop zone — hidden during review phase */}
       {reviewIndex === null && !parsing && (
         <div ref={dropRef}
           onDragOver={(e) => { e.preventDefault(); dropRef.current?.classList.add("border-indigo-500"); }}
-          onDragLeave={() => dropRef.current?.classList.remove("border-indigo-500")}
-          onDrop={(e) => { e.preventDefault(); dropRef.current?.classList.remove("border-indigo-500"); handleFiles(e.dataTransfer.files); }}
+          onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
           onClick={() => fileRef.current?.click()}
-          className="border-2 border-dashed border-[#1F2937] rounded-xl p-10 text-center cursor-pointer hover:border-indigo-500 transition-colors"
+          className="border-2 border-dashed border-[#1F2937] rounded-xl p-8 text-center cursor-pointer hover:border-indigo-500 transition-colors"
         >
           <Upload className="mx-auto mb-3 text-gray-600" size={32} />
-          <p className="text-gray-300 font-medium">Drop PDF shipping labels here</p>
-          <p className="text-sm text-gray-600 mt-1">or click to browse · PDFs &amp; images supported</p>
+          <p className="text-gray-300 font-medium text-sm">Drop PDF shipping labels here</p>
           <p className="text-xs text-indigo-400 mt-2 flex items-center justify-center gap-1"><Camera size={11} /> Camera supported on mobile</p>
           <input ref={fileRef} type="file" accept="image/*,application/pdf" capture="environment" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
         </div>
       )}
-
-      {/* Per-file progress list */}
       {queue.length > 0 && (
         <div className="space-y-2">
           {queue.map((item, i) => (
             <div key={i} className="bg-[#0B0F1A] rounded-xl p-3 border border-[#1F2937]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-300 truncate max-w-[240px]">{item.name}</span>
-                <span className={`text-xs font-medium ${
-                  item.status === "done" ? "text-emerald-400" :
-                  item.status === "failed" ? "text-red-400" :
-                  item.status === "parsing" ? "text-indigo-400 animate-pulse" :
-                  "text-gray-500"
-                }`}>
-                  {item.status === "done" ? "✓ Parsed" : item.status === "failed" ? "✗ Failed" : item.status === "parsing" ? "Parsing…" : "Waiting"}
-                </span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-300 truncate max-w-[200px]">{item.name}</span>
+                <span className="text-[10px] text-gray-500">{item.status}</span>
               </div>
               <div className="h-1 bg-[#1F2937] rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-500 ${statusColor[item.status]}`} style={{ width: `${item.progress}%` }} />
+                <div className="h-full bg-indigo-500 transition-all" style={{ width: `${item.progress}%` }} />
               </div>
-              {item.error && <p className="text-xs text-red-400 mt-1.5 truncate">{item.error}</p>}
             </div>
           ))}
         </div>
       )}
-
-      {/* Parsing spinner */}
-      {parsing && (
-        <div className="flex items-center justify-center gap-2 py-2 text-sm text-indigo-400">
-          <RefreshCw size={14} className="animate-spin" /> Parsing all files… please wait
-        </div>
-      )}
-
-      {/* Summary after parsing completes */}
-      {allParsed && reviewIndex === null && !parsing && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-[#0B0F1A] border border-[#1F2937] rounded-xl text-sm">
-          {doneCount > 0 && <span className="text-emerald-400 font-medium">✓ {doneCount} parsed successfully</span>}
-          {failCount > 0 && <span className="text-red-400 font-medium">✗ {failCount} failed</span>}
-        </div>
-      )}
-
-      {/* Review progress pill */}
-      {reviewIndex !== null && parsedResults.length > 1 && (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600/10 border border-indigo-600/20 rounded-xl text-sm text-indigo-400">
-          <FileText size={13} />
-          Reviewing {reviewIndex + 1} of {parsedResults.length} — resolve each file to continue
-        </div>
-      )}
-
-      {/* Parse button */}
-      {queue.length > 0 && !parsing && queue.some((q) => q.status === "pending") && reviewIndex === null && (
-        <button onClick={startParsing} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2">
-          <Zap size={15} /> Parse {queue.length} file{queue.length > 1 ? "s" : ""} with AI
+      {queue.length > 0 && !parsing && reviewIndex === null && queue.some(q => q.status === 'pending') && (
+        <button onClick={startParsing} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+          <Zap size={14} /> Parse {queue.length} with AI
         </button>
       )}
-
-      {/* ── Review modal (steps sequentially through parsedResults) ──────────────── */}
       {reviewModal && (
-        <Modal
-          open
-          size="max-w-3xl"
-          title={parsedResults.length > 1
-            ? `Review (${(reviewIndex ?? 0) + 1}/${parsedResults.length}) — ${reviewModal.fileName}`
-            : `Review — ${reviewModal.fileName}`
-          }
-          onClose={handleReviewSkip}
-        >
-          <OrderForm
-            key={reviewIndex ?? 0}
-            initial={{ ...EMPTY_ORDER, ...reviewModal.data }}
-            onSave={handleReviewSave}
-            onCancel={handleReviewSkip}
-          />
+        <Modal open title={`Review — ${reviewModal.fileName}`} onClose={handleReviewSkip} size="max-w-3xl">
+          <OrderForm key={reviewIndex} initial={reviewModal.data} onSave={handleReviewSave} onCancel={handleReviewSkip} />
         </Modal>
       )}
-
-      {/* ── Duplicate warning modal ───────────────────────────────────────────────── */}
       {dupWarning && (
-        <Modal open size="max-w-sm" title="Duplicate Detected" onClose={() => handleDup("discard")}>
+        <Modal open title="Duplicate Detected" onClose={() => setDupWarning(null)} size="max-w-sm">
           <div className="space-y-4">
-            <p className="text-sm text-gray-400">
-              An order with the same Order No. or AWB already exists:{" "}
-              <span className="text-white font-mono">{dupWarning.dupOrder.orderNumber}</span>
-            </p>
-            {parsedResults.length > 1 && (reviewIndex ?? 0) + 1 < parsedResults.length && (
-              <p className="text-xs text-indigo-400 bg-indigo-600/10 border border-indigo-600/20 rounded-lg px-3 py-2">
-                {parsedResults.length - (reviewIndex ?? 0) - 1} more file{parsedResults.length - (reviewIndex ?? 0) - 1 !== 1 ? "s" : ""} will be reviewed after this.
-              </p>
-            )}
+            <p className="text-sm text-gray-400">An order with this number already exists. Replace it?</p>
             <div className="flex gap-3">
-              <button onClick={() => handleDup("update")} className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-colors">Replace Existing</button>
-              <button onClick={() => handleDup("new")} className="flex-1 py-2.5 bg-[#1F2937] hover:bg-[#374151] text-white rounded-xl text-sm font-semibold transition-colors">Add as New</button>
-              <button onClick={() => handleDup("discard")} className="px-4 text-gray-500 hover:text-gray-300 text-sm transition-colors">Skip</button>
+              <button onClick={() => handleDup("update")} className="flex-1 py-2 bg-indigo-600 rounded-lg text-sm font-bold">Replace</button>
+              <button onClick={() => handleDup("new")} className="flex-1 py-2 bg-[#1F2937] rounded-lg text-sm font-bold">New</button>
             </div>
           </div>
         </Modal>
@@ -576,113 +432,39 @@ function OrderDetailModal({ order, onClose, onEdit, onDelete, onAddNote, onToggl
   const curStep = STATUS_STEPS.indexOf(order.status);
   const overdue = isOverdue(order);
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}#/track/${order.orderNumber}` : "";
-
   const submitNote = () => { if (!newNote.trim()) return; onAddNote(order.id, newNote.trim()); setNewNote(""); };
 
   return (
     <Modal open onClose={onClose} title={order.orderNumber} size="max-w-2xl">
       <div className="space-y-6 text-white">
-        {overdue && (
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
-            <AlertCircle size={14} /> This order is overdue
-          </div>
-        )}
-
-        {/* Status stepper */}
-        <div className="flex items-center gap-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-0">
           {STATUS_STEPS.map((s, i) => (
-            <div key={s} className="flex items-center flex-1">
-              <div className="flex flex-col items-center flex-shrink-0">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
+            <div key={s} className="flex flex-row sm:flex-1 items-center gap-3 sm:gap-0">
+              <div className="flex flex-row sm:flex-col items-center flex-shrink-0 gap-3 sm:gap-0">
+                <div className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
                   ${i < curStep ? "bg-emerald-500 text-white" : i === curStep ? "bg-indigo-600 text-white ring-4 ring-indigo-600/20" : "bg-[#1F2937] text-gray-600"}`}>
                   {i < curStep ? <CheckCircle size={14} /> : i + 1}
                 </div>
-                <span className={`text-[10px] mt-1 font-medium whitespace-nowrap ${i <= curStep ? "text-gray-300" : "text-gray-600"}`}>{s}</span>
+                <span className={`text-xs sm:text-[10px] sm:mt-1 font-medium whitespace-nowrap ${i <= curStep ? "text-gray-300" : "text-gray-600"}`}>{s}</span>
               </div>
-              {i < STATUS_STEPS.length - 1 && <div className={`h-px flex-1 mb-4 mx-1 ${i < curStep ? "bg-emerald-500" : "bg-[#1F2937]"}`} />}
+              {i < STATUS_STEPS.length - 1 && <div className={`hidden sm:block h-px flex-1 mb-4 mx-1 ${i < curStep ? "bg-emerald-500" : "bg-[#1F2937]"}`} />}
             </div>
           ))}
         </div>
-
-        {/* Info grid */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
-          {[
-            ["Product", order.productName], ["SKU", order.sku],
-            ["Invoice", order.invoiceNumber], ["Amount", fmtCurrency(order.amount)],
-            ["Customer", order.customerName], ["Phone", order.customerPhone || "—"],
-            ["Courier", order.courierPartner], ["AWB", order.courierAWB],
-            ["Pincode", order.pincode], ["Weight", order.weight],
-            ["Order Date", fmtDate(order.date)], ["Expected Delivery", fmtDate(order.expectedDeliveryDate)],
-          ].map(([k, v]) => (
-            <div key={k}>
-              <p className="text-xs text-gray-500 mb-0.5">{k}</p>
-              <p className="text-gray-200 font-medium">{v}</p>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+          {[ ["Product", order.productName], ["SKU", order.sku], ["Amount", fmtCurrency(order.amount)], ["Customer", order.customerName], ["Courier", order.courierPartner], ["AWB", order.courierAWB] ].map(([k, v]) => (
+            <div key={k}><p className="text-xs text-gray-500 mb-0.5">{k}</p><p className="text-gray-200 font-medium break-words">{v}</p></div>
           ))}
-          <div className="col-span-2">
-            <p className="text-xs text-gray-500 mb-0.5">Delivery Address</p>
-            <p className="text-gray-200">{order.deliveryAddress}</p>
-          </div>
+          <div className="sm:col-span-2"><p className="text-xs text-gray-500 mb-0.5">Address</p><p className="text-gray-200 text-xs">{order.deliveryAddress}</p></div>
         </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <StatusBadge status={order.status} />
-          <TypeBadge type={order.orderType} />
-          {order.starred && <span className="text-xs text-amber-400">★ Starred</span>}
-          {order.priority === "Urgent" && <span className="text-xs text-red-400 font-medium">⚡ Urgent</span>}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-[#0B0F1A] border border-[#1F2937] rounded-xl px-3 py-2">
+          <input readOnly value={shareUrl} className="flex-1 text-[10px] bg-transparent text-gray-600 font-mono truncate outline-none" />
+          <button onClick={() => { navigator.clipboard?.writeText(shareUrl); }} className="text-xs font-bold text-accent">Copy Link</button>
         </div>
-
-        {trackUrl && (
-          <a href={trackUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
-            <ExternalLink size={13} /> Track on {order.courierPartner}
-          </a>
-        )}
-
-        {/* Timeline */}
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Timeline</p>
-          <div className="space-y-2 max-h-36 overflow-y-auto">
-            {[...(order.timeline || [])].reverse().map((t, i) => (
-              <div key={i} className="flex items-start gap-3 text-sm">
-                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0" />
-                <div>
-                  <span className="text-gray-300">{t.action}</span>
-                  <span className="text-gray-600 text-xs ml-2">{fmtTs(t.timestamp)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Comments</p>
-          <div className="space-y-2 max-h-28 overflow-y-auto mb-3">
-            {(order.notes || []).length === 0 && <p className="text-sm text-gray-600">No comments yet.</p>}
-            {(order.notes || []).map((n, i) => (
-              <div key={i} className="bg-[#0B0F1A] rounded-lg px-3 py-2">
-                <p className="text-sm text-gray-300">{n.text}</p>
-                <p className="text-xs text-gray-600 mt-0.5">{fmtTs(n.timestamp)}</p>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input className={inp + " flex-1"} value={newNote} onChange={(e) => setNewNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submitNote()} placeholder="Add a comment…" />
-            <button onClick={submitNote} className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm transition-colors">Add</button>
-          </div>
-        </div>
-
-        {/* Share */}
-        <div className="flex items-center gap-3 bg-[#0B0F1A] border border-[#1F2937] rounded-xl px-3 py-2">
-          <Share2 size={13} className="text-gray-600" />
-          <input readOnly value={shareUrl} className="flex-1 text-xs bg-transparent text-gray-600 font-mono" />
-          <button onClick={() => navigator.clipboard?.writeText(shareUrl)} className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Copy</button>
-        </div>
-
-        <div className="flex gap-3 pt-1">
-          <button onClick={onEdit} className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-colors"><Edit size={13} /> Edit</button>
-          <button onClick={() => onToggleStar(order.id)} className="px-4 py-2.5 border border-[#1F2937] hover:bg-[#1F2937] text-gray-400 hover:text-white rounded-xl text-sm transition-colors">{order.starred ? "Unstar" : "★ Star"}</button>
-          <button onClick={() => { if (window.confirm("Delete this order?")) { onDelete(order.id); onClose(); } }} className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-sm flex items-center gap-2 transition-colors"><Trash2 size={13} /></button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button onClick={onEdit} className="flex-1 py-3 sm:py-2 bg-indigo-600 rounded-xl font-bold text-sm">Edit</button>
+          <button onClick={() => onToggleStar(order.id)} className="flex-1 py-3 sm:py-2 border border-[#1F2937] rounded-xl text-sm">{order.starred ? "Unstar" : "Star"}</button>
+          <button onClick={() => { if (confirm("Delete?")) { onDelete(order.id); onClose(); } }} className="flex-1 py-3 sm:py-2 bg-red-500/10 text-red-400 rounded-xl text-sm">Delete</button>
         </div>
       </div>
     </Modal>
@@ -695,54 +477,20 @@ function TrackingPage({ orderNumber, orders, onBack }: { orderNumber: string; or
   const order = orders.find((o) => o.orderNumber === orderNumber);
   const STATUS_STEPS = ["Processing", "Packed", "Dispatched", "Delivered"];
   const curStep = order ? STATUS_STEPS.indexOf(order.status) : -1;
-
-  if (!order) return (
-    <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center p-8">
-      <div className="text-center">
-        <Package className="mx-auto mb-4 text-gray-700" size={56} />
-        <h2 className="text-xl font-semibold text-white mb-2">Order Not Found</h2>
-        <p className="text-gray-500 mb-6 text-sm">No order with number: {orderNumber}</p>
-        <button onClick={onBack} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-colors">← Back</button>
-      </div>
-    </div>
-  );
-
+  if (!order) return <div className="min-h-screen bg-[#0B0F1A] text-white flex items-center justify-center">Order not found.</div>;
   return (
     <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-[#111827] border border-[#1F2937] rounded-2xl overflow-hidden shadow-2xl">
-        <div className="border-b border-[#1F2937] p-6">
-          <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Order Tracking</p>
-          <h1 className="text-xl font-bold text-white font-mono">{order.orderNumber}</h1>
-          <p className="text-sm text-gray-400 mt-1">{order.productName}</p>
+      <div className="w-full max-w-md bg-[#111827] border border-[#1F2937] rounded-2xl p-6 space-y-6 shadow-2xl text-white">
+        <h1 className="text-xl font-bold font-mono">{order.orderNumber}</h1>
+        <div className="space-y-4">
+          {STATUS_STEPS.map((s, i) => (
+            <div key={s} className="flex gap-4">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${i <= curStep ? "bg-emerald-500" : "bg-gray-800 text-gray-500"}`}>{i < curStep ? "✓" : i + 1}</div>
+              <p className={`pt-1 text-sm font-medium ${i <= curStep ? "text-white" : "text-gray-600"}`}>{s}</p>
+            </div>
+          ))}
         </div>
-        <div className="p-6 space-y-6">
-          <div className="space-y-4">
-            {STATUS_STEPS.map((s, i) => (
-              <div key={s} className="flex items-start gap-4">
-                <div className="flex flex-col items-center flex-shrink-0">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all
-                    ${i < curStep ? "bg-emerald-500 border-emerald-500 text-white" : i === curStep ? "bg-indigo-600 border-indigo-600 text-white" : "bg-transparent border-[#374151] text-gray-600"}`}>
-                    {i < curStep ? "✓" : i === curStep ? <span className="w-2 h-2 bg-white rounded-full block" /> : ""}
-                  </div>
-                  {i < STATUS_STEPS.length - 1 && <div className={`w-px h-8 mt-1 ${i < curStep ? "bg-emerald-500" : "bg-[#1F2937]"}`} />}
-                </div>
-                <div className="pt-1">
-                  <p className={`font-medium text-sm ${i <= curStep ? "text-white" : "text-gray-600"}`}>{s}</p>
-                  {i === curStep && <p className="text-xs text-indigo-400 mt-0.5">Current status</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="space-y-3 border-t border-[#1F2937] pt-4 text-sm">
-            {[["Customer", order.customerName], ["Courier", `${order.courierPartner}`], ["Expected", fmtDate(order.expectedDeliveryDate)]].map(([k, v]) => (
-              <div key={k} className="flex justify-between">
-                <span className="text-gray-500">{k}</span>
-                <span className="text-gray-200 font-medium">{v}</span>
-              </div>
-            ))}
-          </div>
-          <button onClick={onBack} className="w-full py-2.5 border border-[#1F2937] hover:bg-[#1F2937] text-gray-400 hover:text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"><Home size={13} /> Dashboard</button>
-        </div>
+        <button onClick={onBack} className="w-full py-2.5 bg-indigo-600 rounded-xl text-sm font-bold">Dashboard</button>
       </div>
     </div>
   );
@@ -759,98 +507,36 @@ function KPICards({ orders, onFilter, onOpenAnalytics }: { orders: Order[]; onFi
     const packed = orders.filter((o) => o.status === "Packed").length;
     const shipped = orders.filter((o) => o.status === "Dispatched").length;
     const delivered = orders.filter((o) => o.status === "Delivered").length;
-    const overdue = orders.filter(isOverdue).length;
-    return { revenue, total, dispatched, processing, packed, shipped, delivered, overdue };
+    return { revenue, total, dispatched, processing, packed, shipped, delivered };
   }, [orders]);
-
-  // Build last-30-day sparkline from order dates
-  const sparkData = useMemo(() => {
-    const days = 14;
-    const buckets = Array(days).fill(0);
-    const now = Date.now();
-    orders.forEach((o) => {
-      const diff = Math.floor((now - new Date(o.date).getTime()) / 86400000);
-      if (diff >= 0 && diff < days) buckets[days - 1 - diff]++;
-    });
-    return buckets;
-  }, [orders]);
-
   const dispatchRate = stats.total ? Math.round((stats.dispatched / stats.total) * 100) : 0;
-
-  const topCards = [
-    { label: "Total Revenue", value: fmtCurrency(stats.revenue), sub: `${stats.total} orders`, icon: null, filter: {}, isRevenue: true, sparkline: sparkData },
-    { label: "Total Orders", value: stats.total, sub: "all time", icon: Package, filter: {} },
-    { label: "Dispatch Rate", value: `${dispatchRate}%`, sub: `${stats.dispatched} shipped`, icon: Truck, filter: { status: ["Dispatched", "Delivered"] } },
+  const cards = [
+    { label: "Total Revenue", value: fmtCurrency(stats.revenue), sub: `${stats.total} orders`, filter: {}, full: true },
+    { label: "Total Orders", value: stats.total, sub: "all time", filter: {} },
+    { label: "Dispatch Rate", value: `${dispatchRate}%`, sub: `${stats.dispatched} shipped`, filter: { status: ["Dispatched", "Delivered"] } },
   ];
-
-  const bottomCards = [
-    { label: "Processing", value: stats.processing, sub: "being prepared", icon: Clock, filter: { status: ["Processing"] } },
-    { label: "Packed", value: stats.packed, sub: "ready to ship", icon: Package, filter: { status: ["Packed"] } },
-    { label: "Shipped", value: stats.shipped, sub: "in transit", icon: Truck, filter: { status: ["Dispatched"] } },
-    { label: "Delivered", value: stats.delivered, sub: "completed", icon: CheckCircle, filter: { status: ["Delivered"] } },
+  const bottom = [
+    { label: "Processing", value: stats.processing, icon: Clock, filter: { status: ["Processing"] } },
+    { label: "Packed", value: stats.packed, icon: Package, filter: { status: ["Packed"] } },
+    { label: "Shipped", value: stats.shipped, icon: Truck, filter: { status: ["Dispatched"] } },
+    { label: "Delivered", value: stats.delivered, icon: CheckCircle, filter: { status: ["Delivered"] } },
   ];
-
   return (
-    <div className="mb-8 space-y-6">
-      {/* Top Row — Revenue (2 cols) + Orders (1 col) + Dispatch (1 col) = 4 cols */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
-        {/* Total Revenue - spans 2 columns */}
-        <button
-          onClick={onOpenAnalytics}
-          className="kpi-card md:col-span-2 xl:col-span-2 rounded-2xl p-5 sm:p-6 md:p-7 text-left transition group w-full relative cursor-pointer border border-transparent hover:border-indigo-400/40 hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_30px_rgba(99,102,241,0.15)]"
-        >
-          <div className="flex items-start justify-between gap-6">
-            <div className="flex-1">
-              <p className="kpi-label mb-3">Total Revenue</p>
-              <p className="kpi-value" style={{ fontSize: '2.4rem' }}>{topCards[0].value}</p>
-              <p className="kpi-sub mt-2">{topCards[0].sub}</p>
-            </div>
-            <div className="hidden sm:block flex-shrink-0">
-              <Sparkline data={topCards[0].sparkline || []} w={260} h={72} color="var(--accent)" />
-            </div>
-          </div>
-          <span className="absolute bottom-4 right-5 text-xs font-medium" style={{ color: 'var(--text-sub)' }}>View Analytics →</span>
-        </button>
-
-        {/* Total Orders & Dispatch Rate - 1 col each */}
-        {topCards.slice(1).map((c) => (
-          <button
-            key={c.label}
-            onClick={() => onFilter(c.filter)}
-            className="kpi-card rounded-2xl p-5 sm:p-6 md:p-7 text-left transition group w-full"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="kpi-label">{c.label}</p>
-                {c.icon && (
-                  <div className="p-1.5 rounded-lg transition-colors" style={{backgroundColor:'var(--accent-muted)'}}>
-                    <c.icon size={14} style={{ color: 'var(--accent)' }} className="group-hover:scale-110 transition-transform" />
-                  </div>
-                )}
-              </div>
-              <p className="kpi-value" style={{ fontSize: '2.4rem' }}>{c.value}</p>
-              <p className="kpi-sub mt-2">{c.sub}</p>
-            </div>
+    <div className="mb-8 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {cards.map((c, i) => (
+          <button key={i} onClick={() => i === 0 ? onOpenAnalytics() : onFilter(c.filter)} className={`kpi-card rounded-2xl p-5 text-left border border-transparent hover:border-indigo-400/40 transition ${c.full ? 'md:col-span-2' : ''}`}>
+            <p className="kpi-label text-xs mb-1">{c.label}</p>
+            <p className="kpi-value text-2xl font-black">{c.value}</p>
+            <p className="kpi-sub text-[10px] mt-1 opacity-60">{c.sub}</p>
           </button>
         ))}
       </div>
-
-      {/* Bottom Row — Secondary Metrics (4 equal cols) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
-        {bottomCards.map((c) => (
-          <button
-            key={c.label}
-            onClick={() => onFilter(c.filter)}
-            className="kpi-card rounded-2xl p-5 sm:p-6 md:p-7 text-left transition group w-full"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <p className="kpi-label">{c.label}</p>
-              <div className="p-1.5 rounded-lg transition-colors" style={{backgroundColor:'var(--accent-muted)'}}>
-                <c.icon size={16} style={{ color: 'var(--accent)' }} className="group-hover:scale-110 transition-transform" />
-              </div>
-            </div>
-            <p className="kpi-value" style={{ fontSize: '2.4rem' }}>{c.value}</p>
-            <p className="kpi-sub mt-2">{c.sub}</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {bottom.map((c, i) => (
+          <button key={i} onClick={() => onFilter(c.filter)} className="kpi-card rounded-2xl p-4 text-left">
+            <p className="kpi-label text-[10px] mb-1">{c.label}</p>
+            <p className="kpi-value text-xl font-bold">{c.value}</p>
           </button>
         ))}
       </div>
@@ -860,119 +546,34 @@ function KPICards({ orders, onFilter, onOpenAnalytics }: { orders: Order[]; onFi
 
 // ─── FILTER BAR ───────────────────────────────────────────────────────────────
 
-interface Filters {
-  status?: string[]; orderType?: string[]; courier?: string[];
-  overdueOnly?: boolean; starredOnly?: boolean; dateRange?: string;
-  dateFrom?: string; dateTo?: string; amountMin?: number; amountMax?: number;
-  [key: string]: unknown;
-}
-
 function FilterBar({ filters, setFilters, presets, onSavePreset, onDeletePreset, onApplyPreset }: {
   filters: Filters; setFilters: React.Dispatch<React.SetStateAction<Filters>>;
   presets: FilterPreset[]; onSavePreset: (n: string) => void;
   onDeletePreset: (n: string) => void; onApplyPreset: (p: FilterPreset) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [presetName, setPresetName] = useState("");
-  const [showPresetInput, setShowPresetInput] = useState(false);
-  const toggle = (key: string, val: string) => {
-    const arr = (filters[key] as string[]) || [];
-    setFilters((p) => ({ ...p, [key]: arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val] }));
+  const hasFilters = Object.values(filters).some((v) => Array.isArray(v) ? v.length > 0 : !!v);
+  const toggle = (k: string, v: string) => {
+    const arr = (filters[k] as string[]) || [];
+    setFilters(p => ({ ...p, [k]: arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v] }));
   };
-  const hasFilters = Object.values(filters).some((v) => Array.isArray(v) ? v.length > 0 : v === true || (typeof v === "number" && v > 0));
-
   return (
-    <div className="mb-4">
-      {presets.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {presets.map((p) => (
-            <div key={p.name} className="flex items-center gap-1 bg-accent-muted border border-accent/20 text-accent rounded-full px-2.5 py-1 text-xs font-medium">
-              <button onClick={() => onApplyPreset(p)}>{p.name}</button>
-              <button onClick={() => onDeletePreset(p.name)} className="hover:text-danger transition-colors ml-0.5"><X size={9} /></button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-sm font-medium hover:text-white transition-colors" style={{color:'var(--text-muted)'}}>
-        <Filter size={13} />
-        Filters
-        {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
-        {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+    <div className="relative">
+      <button onClick={() => setOpen(!open)} className="btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-token">
+        <Filter size={12} /> Filters {hasFilters && "•"} {open ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
       </button>
-
       {open && (
-        <div className="mt-3 bg-card border border-token rounded-2xl p-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Status</p>
-            {ORDER_STATUSES.map((s) => (
-              <label key={s} className="flex items-center gap-2 text-sm mb-1.5 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
-                <input type="checkbox" className="accent-indigo-500" checked={(filters.status || []).includes(s)} onChange={() => toggle("status", s)} /> {s}
-              </label>
-            ))}
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Order Type</p>
-            {ORDER_TYPES.map((t) => (
-              <label key={t} className="flex items-center gap-2 text-sm mb-1.5 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
-                <input type="checkbox" className="accent-indigo-500" checked={(filters.orderType || []).includes(t)} onChange={() => toggle("orderType", t)} /> {t}
-              </label>
-            ))}
-            <p className="text-xs font-semibold uppercase tracking-wider mt-4 mb-2.5" style={{color:'var(--text-sub)'}}>Courier</p>
-            {COURIERS.map((c) => (
-              <label key={c} className="flex items-center gap-2 text-sm mb-1.5 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
-                <input type="checkbox" className="accent-indigo-500" checked={(filters.courier || []).includes(c)} onChange={() => toggle("courier", c)} /> {c}
-              </label>
-            ))}
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Date Range</p>
-            <div className="space-y-1">
-              {["Today", "This Week", "This Month", "Custom"].map((r) => (
-                <button key={r} onClick={() => setFilters((p) => ({ ...p, dateRange: r === filters.dateRange ? undefined : r }))}
-                  className={`block w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${filters.dateRange === r ? "bg-accent-muted text-accent" : "hover:bg-[#1F2937] hover:text-white"}`} style={{color:'var(--text-muted)'}}>{r}</button>
-              ))}
-            </div>
-            {filters.dateRange === "Custom" && (
-              <div className="mt-2 space-y-1.5">
-                <input type="date" value={filters.dateFrom || ""} onChange={(e) => setFilters((p) => ({ ...p, dateFrom: e.target.value }))} className={inp} />
-                <input type="date" value={filters.dateTo || ""} onChange={(e) => setFilters((p) => ({ ...p, dateTo: e.target.value }))} className={inp} />
-              </div>
-            )}
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Other</p>
-            <label className="flex items-center gap-2 text-sm mb-2 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
-              <input type="checkbox" className="accent-indigo-500" checked={!!filters.overdueOnly} onChange={(e) => setFilters((p) => ({ ...p, overdueOnly: e.target.checked }))} /> Overdue Only
-            </label>
-            <label className="flex items-center gap-2 text-sm mb-4 cursor-pointer transition-colors" style={{color:'var(--text-muted)'}}>
-              <input type="checkbox" className="accent-indigo-500" checked={!!filters.starredOnly} onChange={(e) => setFilters((p) => ({ ...p, starredOnly: e.target.checked }))} /> Starred Only
-            </label>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{color:'var(--text-sub)'}}>Amount Range (₹)</p>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-xs mb-1"><span style={{color:'var(--text-sub)'}}>Min</span><span className="text-accent">₹{(filters.amountMin ?? 0).toLocaleString("en-IN")}</span></div>
-                <input type="range" min={0} max={100000} step={500} value={filters.amountMin ?? 0} onChange={(e) => setFilters((p) => ({ ...p, amountMin: Number(e.target.value) }))} className="w-full accent-indigo-500" />
-              </div>
-              <div>
-                <div className="flex justify-between text-xs mb-1"><span style={{color:'var(--text-sub)'}}>Max</span><span className="text-accent">{(filters.amountMax ?? 100000) >= 100000 ? "₹1L+" : `₹${(filters.amountMax ?? 100000).toLocaleString("en-IN")}`}</span></div>
-                <input type="range" min={0} max={100000} step={500} value={filters.amountMax ?? 100000} onChange={(e) => setFilters((p) => ({ ...p, amountMax: Number(e.target.value) }))} className="w-full accent-indigo-500" />
-              </div>
-            </div>
-          </div>
+        <div className="absolute right-0 mt-2 z-50 w-72 bg-[#111827] border border-[#1F2937] rounded-2xl shadow-2xl p-5 space-y-4">
+           <div>
+              <p className="text-[10px] font-black uppercase text-gray-500 mb-2">Status</p>
+              <div className="flex flex-wrap gap-2">
+                {ORDER_STATUSES.map(s => (
+                  <button key={s} onClick={() => toggle('status', s)} className={`px-2 py-1 rounded-md text-[10px] font-bold border transition ${ ((filters.status as string[]) || []).includes(s) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-[#1F2937] text-gray-400 hover:border-gray-600'}`}>{s}</button>
 
-          <div className="col-span-2 sm:col-span-4 flex items-center gap-3 pt-3 border-t border-token">
-            {showPresetInput ? (
-              <>
-                <input value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Preset name…" className={inp + " max-w-xs"} />
-                <button onClick={() => { onSavePreset(presetName); setPresetName(""); setShowPresetInput(false); }} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors">Save</button>
-                <button onClick={() => setShowPresetInput(false)} className="text-sm hover:text-gray-300" style={{color:'var(--text-sub)'}}>Cancel</button>
-              </>
-            ) : (
-              <button onClick={() => setShowPresetInput(true)} className="text-sm hover:text-indigo-300 transition-colors text-accent">+ Save as preset</button>
-            )}
-            <button onClick={() => setFilters({})} className="ml-auto text-sm hover:text-red-400 transition-colors" style={{color:'var(--text-muted)'}}>Clear all</button>
-          </div>
+                ))}
+              </div>
+           </div>
+           <button onClick={() => setFilters({})} className="w-full py-2 text-[10px] font-black uppercase text-gray-500 border border-[#1F2937] rounded-lg hover:text-white hover:border-gray-600">Clear All</button>
         </div>
       )}
     </div>
@@ -983,185 +584,62 @@ function FilterBar({ filters, setFilters, presets, onSavePreset, onDeletePreset,
 
 export default function SalesTrackerApp() {
   useEffect(() => { hydrateStore(); }, []);
-
   const router = useRouter();
   const supabase = createClient();
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/auth/login');
-  };
+  const { orders, presets, addOrder, deleteOrder, updateStatus, addNote, toggleStar, savePreset, deletePreset, toggleDarkMode, darkMode } = useSalesStore();
 
-  const { orders, presets, darkMode, addOrder, deleteOrder, updateStatus, addNote, toggleStar, savePreset, deletePreset, toggleDarkMode } = useSalesStore();
-
-  // Auto-mark orders as delivered after 10 days if still in Dispatched status
-  useEffect(() => {
-    const autoMarkDelivered = () => {
-      const now = new Date();
-      const ordersToUpdate = orders
-        .filter((o) => o.status === "Dispatched" && o.date)
-        .filter((o) => {
-          const orderDate = new Date(o.date);
-          const daysDiff = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
-          return daysDiff >= 10;
-        })
-        .map((o) => o.id);
-      
-      if (ordersToUpdate.length > 0) {
-        updateStatus(ordersToUpdate, "Delivered");
-      }
-    };
-    
-    // Check on mount
-    autoMarkDelivered();
-    
-    // Check every hour
-    const interval = setInterval(autoMarkDelivered, 60 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [orders, updateStatus]);
+  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/auth/login'); };
 
   const [searchQ, setSearchQ] = useState("");
   const [filters, setFilters] = useState<Filters>({});
   const [sortConfig, setSortConfig] = useState<{ col: string; dir: "asc"|"desc" }[]>([{ col: "date", dir: "desc" }]);
+
+  const handleSavePreset = useCallback((name: string) => { savePreset(name, filters); }, [filters, savePreset]);
+  const handleDeletePreset = useCallback((name: string) => { deletePreset(name); }, [deletePreset]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [modal, setModal] = useState<{ type: string; data?: string } | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [trackingId, setTrackingId] = useState<string | null>(null);
-  const [bulkStatus, setBulkStatus] = useState("");
-  const [exportOpen, setExportOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileFabOpen, setMobileFabOpen] = useState(false);
   const [mobileMenuId, setMobileMenuId] = useState<string | null>(null);
+  const [mobileActiveTab, setMobileActiveTab] = useState<"home" | "orders" | "analytics">("home");
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
-  const dashboardScrollRef = useRef(0);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Online/offline
   useEffect(() => {
     setIsOnline(navigator.onLine);
-    const on = () => { setIsOnline(true); addToast("Back online", "info"); };
-    const off = () => { setIsOnline(false); addToast("Offline — changes saved locally", "warning"); };
+    const on = () => setIsOnline(true); const off = () => setIsOnline(false);
     window.addEventListener("online", on); window.addEventListener("offline", off);
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, []);
 
-  // Hash routing
   useEffect(() => {
     const check = () => { const h = window.location.hash; setTrackingId(h.startsWith("#/track/") ? decodeURIComponent(h.slice(8)) : null); };
     check(); window.addEventListener("hashchange", check);
     return () => window.removeEventListener("hashchange", check);
   }, []);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName)) { if (e.key === "Escape") (e.target as HTMLElement).blur(); return; }
-      if (e.key === "/") { e.preventDefault(); searchRef.current?.focus(); }
-      if (e.key === "n" || e.key === "N") setModal({ type: "newOrder" });
-      if (e.key === "u" || e.key === "U") setModal({ type: "upload" });
-      if (e.key === "?" ) setModal({ type: "shortcuts" });
-      if (e.key === "Escape") { setModal(null); setMobileSearchOpen(false); setMobileFabOpen(false); setMobileMenuId(null); setAnalyticsOpen(false); }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
+  const addToast = useCallback((m: string, t = "info") => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts(p => [...p, { id, message: m, type: t }]);
+    setTimeout(() => removeToast(id), 3000);
   }, []);
+  const removeToast = useCallback((id: string) => setToasts(p => p.filter(x => x.id !== id)), []);
 
-  const openAnalytics = useCallback(() => {
-    dashboardScrollRef.current = window.scrollY;
-    setAnalyticsOpen(true);
-  }, []);
+  const handleAddOrder = (f: Partial<Order>, isEdit = false, id?: string) => { addOrder(f, isEdit, id); addToast(isEdit ? "Updated" : "Added", "success"); setModal(null); };
+  const handleDeleteOrder = (id: string) => { deleteOrder(id); addToast("Deleted", "delete"); };
+  const handlePrintLabel = (o: Order) => { if (o.labelBase64) window.open(`data:${o.labelMimeType};base64,${o.labelBase64}`, "_blank"); };
+  const handleParsed = (d: Partial<Order>, a: "new"|"update", id?: string) => { handleAddOrder(d, a === "update", id); };
 
-  const closeAnalytics = useCallback(() => {
-    setAnalyticsOpen(false);
-    requestAnimationFrame(() => window.scrollTo({ top: dashboardScrollRef.current, behavior: "auto" }));
-  }, []);
-
-  // Toast
-  const addToast = useCallback((message: string, type = "info") => {
-    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `t_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    setToasts((p) => [...p, { id, message, type }]);
-    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 3500);
-  }, []);
-  const removeToast = useCallback((id: string) => setToasts((p) => p.filter((t) => t.id !== id)), []);
-
-  // Order actions
-  const handleAddOrder = useCallback((form: Partial<Order>, isEdit = false, editId?: string, closeModal = true) => {
-    addOrder(form, isEdit, editId);
-    addToast(isEdit ? "Order updated" : "Order added", "success");
-    if (closeModal) setModal(null);
-  }, [addOrder, addToast]);
-
-  const handleDeleteOrder = useCallback((id: string) => {
-    deleteOrder(id);
-    setSelected((p) => { const n = new Set(p); n.delete(id); return n; });
-    addToast("Order deleted", "delete");
-  }, [deleteOrder, addToast]);
-
-  const handlePrintLabel = useCallback((order: Order) => {
-    if (!order.labelBase64 || !order.labelMimeType) {
-      addToast("No uploaded PDF or image found for this order", "warning");
-      return;
-    }
-
-    try {
-      const byteCharacters = atob(order.labelBase64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: order.labelMimeType });
-      const url = URL.createObjectURL(blob);
-
-      const win = window.open(url, "_blank");
-      if (!win) {
-        addToast("Popup blocked. Allow popups to print the label.", "warning");
-        return;
-      }
-
-      // For images, try to trigger print automatically
-      if (order.labelMimeType !== "application/pdf") {
-        win.onload = () => {
-          win.print();
-          // Optionally revoke the URL after printing
-          // URL.revokeObjectURL(url);
-        };
-      }
-    } catch (err) {
-      console.error("Print error:", err);
-      addToast("Failed to process label for printing", "error");
-    }
-  }, [addToast]);
-
-  const handleParsed = useCallback((formData: Partial<Order>, action: "new"|"update", existingId?: string) => {
-    if (action === "update" && existingId) handleAddOrder(formData, true, existingId, false);
-    else handleAddOrder(formData, false, undefined, false);
-  }, [handleAddOrder]);
-
-  // Filtering + sorting
   const filteredOrders = useMemo(() => {
     let res = [...orders];
-    const today = new Date().toDateString();
-    if (searchQ) { const q = searchQ.toLowerCase(); res = res.filter((o) => [o.customerName, o.orderNumber, o.courierAWB, o.sku, o.productName, o.pincode].some((f) => f?.toLowerCase().includes(q))); }
-    if (filters.status?.length) res = res.filter((o) => filters.status!.includes(o.status));
-    if (filters.orderType?.length) res = res.filter((o) => filters.orderType!.includes(o.orderType));
-    if (filters.courier?.length) res = res.filter((o) => filters.courier!.includes(o.courierPartner));
-    if (filters.overdueOnly) res = res.filter(isOverdue);
-    if (filters.starredOnly) res = res.filter((o) => o.starred);
-    if (filters.amountMin != null && filters.amountMin > 0) res = res.filter((o) => Number(o.amount) >= filters.amountMin!);
-    if (filters.amountMax != null && filters.amountMax < 100000) res = res.filter((o) => Number(o.amount) <= filters.amountMax!);
-    if (filters.dateRange === "Today") res = res.filter((o) => new Date(o.date).toDateString() === today);
-    if (filters.dateRange === "This Week") { const d = new Date(); d.setDate(d.getDate() - 7); res = res.filter((o) => new Date(o.date) >= d); }
-    if (filters.dateRange === "This Month") { const d = new Date(); d.setDate(1); res = res.filter((o) => new Date(o.date) >= d); }
-    if (filters.dateRange === "Custom") {
-      if (filters.dateFrom) res = res.filter((o) => o.date >= filters.dateFrom!);
-      if (filters.dateTo) res = res.filter((o) => o.date <= filters.dateTo!);
-    }
+    if (searchQ) { const q = searchQ.toLowerCase(); res = res.filter(o => [o.customerName, o.orderNumber, o.sku].some(f => f?.toLowerCase().includes(q))); }
+    if ((filters.status as string[])?.length) res = res.filter(o => (filters.status as string[]).includes(o.status));
     res.sort((a, b) => {
-      if (a.starred && !b.starred) return -1; if (!a.starred && b.starred) return 1;
       for (const { col, dir } of sortConfig) {
-        const va = (a as unknown as Record<string, unknown>)[col] ?? "";
-        const vb = (b as unknown as Record<string, unknown>)[col] ?? "";
+        const va = (a as any)[col] ?? ""; const vb = (b as any)[col] ?? "";
         const cmp = String(va).localeCompare(String(vb), undefined, { numeric: true });
         if (cmp !== 0) return dir === "asc" ? cmp : -cmp;
       }
@@ -1170,452 +648,184 @@ export default function SalesTrackerApp() {
     return res;
   }, [orders, searchQ, filters, sortConfig]);
 
-  const handleSort = (col: string, shift: boolean) => {
-    setSortConfig((prev) => {
-      if (shift) { const i = prev.findIndex((s) => s.col === col); if (i >= 0) { const c = [...prev]; c[i] = { col, dir: c[i].dir === "asc" ? "desc" : "asc" }; return c; } return [...prev, { col, dir: "asc" }]; }
-      const cur = prev.find((s) => s.col === col);
-      return [{ col, dir: cur?.dir === "asc" ? "desc" : "asc" }];
-    });
-  };
+  const handleSort = (col: string) => setSortConfig(p => [{ col, dir: p[0]?.col === col && p[0].dir === "asc" ? "desc" : "asc" }]);
 
-  // Bulk
-  const selectedArr = useMemo(() => [...selected], [selected]);
-  const allSelected = filteredOrders.length > 0 && filteredOrders.every((o) => selected.has(o.id));
-
-  const applyBulkStatus = () => {
-    if (!bulkStatus || !selectedArr.length) return;
-    updateStatus(selectedArr, bulkStatus as Order["status"]);
-    addToast(`Status → ${bulkStatus}`, "success");
-    setSelected(new Set()); setBulkStatus("");
-  };
-
-  // Export
-  const exportCSV = (data: Order[], filename = "orders.csv") => {
-    const cols = ["orderNumber","customerName","productName","sku","amount","status","orderType","courierPartner","courierAWB","date","expectedDeliveryDate","pincode"] as (keyof Order)[];
-    const rows = data.map((o) => cols.map((c) => `"${(o[c] ?? "").toString().replace(/"/g, '""')}"`).join(","));
-    const blob = new Blob([cols.join(",") + "\n" + rows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
-    addToast("CSV exported", "export");
-  };
-  const exportExcel = async (data: Order[]) => {
-    try {
-      const XLSX = await import("xlsx");
-      const ws = XLSX.utils.json_to_sheet(data.map((o) => ({ "Order No.": o.orderNumber, Customer: o.customerName, Product: o.productName, SKU: o.sku, "Amount (₹)": o.amount, Status: o.status, Type: o.orderType, Courier: o.courierPartner, AWB: o.courierAWB, Date: o.date })));
-      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Orders"); XLSX.writeFile(wb, "orders.xlsx");
-      addToast("Excel exported", "export");
-    } catch { addToast("Excel export failed", "error"); }
-  };
-
-  // Sort icon
-  const SortIcon = ({ col }: { col: string }) => {
-    const s = sortConfig.find((x) => x.col === col);
-    if (!s) return <ArrowUp size={10} style={{color:'var(--text-sub)'}} />;
-    return s.dir === "asc" ? <ArrowUp size={10} className="text-accent" /> : <ArrowDown size={10} className="text-accent" />;
-  };
-
-  const activeOrder = (modal?.type === "view" || modal?.type === "edit") ? orders.find((o) => o.id === modal?.data) : null;
+  const activeOrder = (modal?.type === "view" || modal?.type === "edit") ? orders.find(o => o.id === modal?.data) : null;
 
   if (trackingId) return <TrackingPage orderNumber={trackingId} orders={orders} onBack={() => { window.location.hash = ""; }} />;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
-
-      {/* Offline Banner */}
-      {!isOnline && (
-        <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-400 text-xs text-center py-2 flex items-center justify-center gap-2">
-          <WifiOff size={12} /> Offline — changes saved to IndexedDB
-        </div>
-      )}
-
-      {/* ── NAVBAR ─────────────────────────────────────────────────────────── */}
-      <nav className="navbar sticky top-0 z-30">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-          {/* Logo */}
-          <div className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="navbar-logo w-8 h-8 flex items-center justify-center">
-              <Package size={16} className="text-white" />
-            </div>
-            <span className="font-semibold text-sm" style={{color:'var(--text)'}}>SalesTracker</span>
-          </div>
-
-          {/* Search — centered */}
-          <div className="hidden md:flex flex-1 justify-center">
-            <div className="relative w-full max-w-md">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-              <input
-                ref={searchRef}
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                placeholder='Search orders… ("/" to focus)'
-                className="navbar-search w-full pl-9 pr-4 py-2.5 text-sm border rounded-xl focus:outline-none transition-all"
-                style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text)', borderColor: 'var(--input-border)' }}
-              />
-              {searchQ && (
-                <button onClick={() => setSearchQ("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
-                  <X size={14} />
-                </button>
-              )}
+    <div className={`min-h-screen ${darkMode ? 'dark' : ''}`} style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
+      <nav className="navbar sticky top-0 z-30 bg-header border-b border-token">
+        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 font-bold text-sm"><Package size={18} className="text-indigo-500" /> SalesTracker</div>
+          
+          <div className="hidden md:flex flex-1 max-w-md mx-8">
+            <div className="relative w-full">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input ref={searchRef} value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Search orders..." className="w-full pl-9 pr-4 py-2 bg-subtle border border-token rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="hidden md:flex items-center gap-2 flex-shrink-0 ml-auto">
-            <button
-              onClick={toggleDarkMode}
-              className="navbar-icon-btn p-2"
-              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-            <button onClick={() => setModal({ type: "upload" })} className="btn-ghost flex items-center gap-1.5 px-3 py-2 text-sm font-medium">
-              <Upload size={14} /> Upload PDF
-            </button>
-            <button onClick={() => setModal({ type: "newOrder" })} className="btn-accent flex items-center gap-1.5 px-4 py-2 text-sm font-semibold shadow-lg">
-              <Plus size={14} /> New Order
-            </button>
-            <button onClick={() => setModal({ type: "shortcuts" })} className="navbar-icon-btn p-2" title="Keyboard shortcuts">
-              <Keyboard size={16} />
-            </button>
-            <div className="w-px h-6 mx-1" style={{ backgroundColor: 'var(--border)' }}></div>
-            <button onClick={handleLogout} className="navbar-logout flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg" title="Logout">
-              <LogOut size={14} /> Logout
-            </button>
+          <div className="flex items-center gap-2">
+            <button onClick={toggleDarkMode} className="p-2 hover:bg-subtle rounded-lg">{darkMode ? <Sun size={16} /> : <Moon size={16} />}</button>
+            <button onClick={() => setModal({ type: 'upload' })} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold"><Upload size={14} /> Upload</button>
+            <button onClick={handleLogout} className="p-2 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-lg"><LogOut size={16} /></button>
           </div>
-
-          <div className="flex items-center gap-2 md:hidden ml-auto">
-            <button
-              onClick={() => { setMobileSearchOpen((prev) => !prev); setMobileFabOpen(false); }}
-              className="navbar-icon-btn p-2"
-              title="Search orders"
-            >
-              <Search size={16} />
-            </button>
-            <button onClick={toggleDarkMode} className="navbar-icon-btn p-2" title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
-              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-            <button onClick={() => setModal({ type: "shortcuts" })} className="navbar-icon-btn p-2" title="Keyboard shortcuts">
-              <Keyboard size={16} />
-            </button>
-          </div>
-        </div>
-
-          {mobileSearchOpen && (
-            <div className="md:hidden px-4 pb-3">
-              <div className="relative w-full">
-                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-                <input
-                  ref={searchRef}
-                  value={searchQ}
-                  onChange={(e) => setSearchQ(e.target.value)}
-                  placeholder='Search orders…'
-                  className="navbar-search w-full pl-9 pr-10 py-2.5 text-sm border rounded-xl focus:outline-none transition-all"
-                  style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text)', borderColor: 'var(--input-border)' }}
-                />
-                {searchQ && (
-                  <button onClick={() => setSearchQ("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </nav>
 
-      {/* ── MAIN ───────────────────────────────────────────────────────────── */}
-      <main className="max-w-screen-2xl mx-auto px-6 py-6">
-
-        {/* KPI Cards */}
-        <KPICards orders={orders} onFilter={(f) => setFilters(f as Filters)} onOpenAnalytics={openAnalytics} />
-
-        {/* Table card */}
-        <div className="card-token rounded-2xl overflow-hidden theme-transition">
-
-          {/* Table toolbar */}
-          <div className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-                {filteredOrders.length} order{filteredOrders.length !== 1 ? "s" : ""}
-                {searchQ && <span style={{ color: 'var(--text-sub)' }}> for "{searchQ}"</span>}
-              </span>
-              <FilterBar filters={filters} setFilters={setFilters} presets={presets}
-                onSavePreset={(n) => { savePreset(n, filters as Record<string, unknown>); addToast(`Preset "${n}" saved`, "success"); }}
-                onDeletePreset={deletePreset}
-                onApplyPreset={(p) => setFilters(p.filters as Filters)}
-              />
-            </div>
-            <div className="relative">
-              <button onClick={() => setExportOpen(!exportOpen)} className="btn-ghost flex items-center gap-1.5 px-3 py-2 text-sm font-medium">
-                <Download size={14} /> Export <ChevronDown size={12} />
-              </button>
-              {exportOpen && (
-                <div className="absolute right-0 mt-1 rounded-xl shadow-2xl z-20 w-52 overflow-hidden card-token border" style={{ border: '1px solid var(--border)' }}>
-                  {[["All orders (CSV)", () => exportCSV(orders, "all-orders.csv")], ["Filtered (CSV)", () => exportCSV(filteredOrders)], ["Excel (.xlsx)", () => exportExcel(filteredOrders)]].map(([l, fn]) => (
-                    <button key={l as string} onClick={() => { (fn as () => void)(); setExportOpen(false); }} className="w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-opacity-50" style={{ color: 'var(--text-muted)' }} onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')} onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}>{l as string}</button>
-                  ))}
-                </div>
-              )}
-            </div>
+      <main className="max-w-screen-2xl mx-auto px-4 py-6 pb-24">
+        {/* Desktop View */}
+        <div className="hidden md:block space-y-6">
+          <KPICards orders={orders} onFilter={setFilters} onOpenAnalytics={() => setAnalyticsOpen(true)} />
+          <div className="card-token border rounded-2xl overflow-hidden">
+             <div className="px-6 py-4 flex items-center justify-between bg-subtle/30 border-b border-token">
+                <span className="text-xs font-bold">{filteredOrders.length} Orders</span>
+                <FilterBar filters={filters} setFilters={setFilters} presets={presets} onSavePreset={handleSavePreset} onDeletePreset={handleDeletePreset} onApplyPreset={p => setFilters(p.filters)} />
+             </div>
+             <div className="overflow-x-auto">
+               <table className="w-full text-left text-xs">
+                 <thead className="bg-subtle/50 text-gray-500 uppercase tracking-widest font-black">
+                   <tr>
+                     <th className="px-6 py-3">Order</th>
+                     <th className="px-6 py-3">Customer</th>
+                     <th className="px-6 py-3">Amount</th>
+                     <th className="px-6 py-3">Status</th>
+                     <th className="px-6 py-3 text-right">Actions</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-token">
+                   {filteredOrders.map(o => (
+                     <tr key={o.id} className="hover:bg-subtle/30 transition-colors">
+                       <td className="px-6 py-4 font-mono font-bold">{o.orderNumber}</td>
+                       <td className="px-6 py-4 font-bold">{o.customerName}</td>
+                       <td className="px-6 py-4 font-black">{fmtCurrency(o.amount)}</td>
+                       <td className="px-6 py-4"><StatusBadge status={o.status} /></td>
+                       <td className="px-6 py-4 text-right">
+                         <div className="flex justify-end gap-2">
+                           <button onClick={() => setModal({ type: 'view', data: o.id })} className="p-1.5 hover:bg-subtle rounded-md"><Eye size={14} /></button>
+                           <button onClick={() => setModal({ type: 'edit', data: o.id })} className="p-1.5 hover:bg-subtle rounded-md"><Edit size={14} /></button>
+                           <button onClick={() => handleDeleteOrder(o.id)} className="p-1.5 hover:bg-red-500/10 text-red-500 rounded-md"><Trash2 size={14} /></button>
+                         </div>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
           </div>
+        </div>
 
-          {/* Bulk bar */}
-          {selected.size > 0 && (
-            <div className="px-6 py-3 bg-accent-muted/50 border-b border-accent/20 flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-medium text-accent">{selected.size} selected</span>
-              <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className={sel + " max-w-[180px] py-1.5"}>
-                <option value="">Change status…</option>
-                {ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}
-              </select>
-              <button onClick={applyBulkStatus} disabled={!bulkStatus} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm rounded-lg font-medium transition-colors">Apply</button>
-              <button onClick={() => exportCSV(filteredOrders.filter((o) => selected.has(o.id)))} className="px-3 py-1.5 text-sm hover:text-white border border-token rounded-lg transition-colors" style={{color:'var(--text-muted)'}}>Export CSV</button>
-              <button onClick={() => { selectedArr.forEach((id) => toggleStar(id)); setSelected(new Set()); }} className="px-3 py-1.5 text-sm hover:text-amber-400 border border-token rounded-lg transition-colors" style={{color:'var(--text-muted)'}}>★ Star</button>
-              <button onClick={() => { if (window.confirm(`Delete ${selectedArr.length} orders?`)) { selectedArr.forEach((id) => deleteOrder(id)); setSelected(new Set()); addToast(`${selectedArr.length} deleted`, "delete"); } }} className="px-3 py-1.5 text-sm hover:text-red-300 border border-token rounded-lg transition-colors" style={{color:'var(--danger)'}}>Delete</button>
-              <button onClick={() => setSelected(new Set())} className="ml-auto" style={{color:'var(--text-muted)'}}><X size={13} /></button>
+        {/* Mobile View */}
+        <div className="md:hidden space-y-4">
+          {mobileActiveTab === "home" && (
+            <div className="space-y-6">
+              <KPICards orders={orders} onFilter={f => { setFilters(f); setMobileActiveTab('orders'); }} onOpenAnalytics={() => setAnalyticsOpen(true)} />
+              <div className="flex justify-between items-center px-1">
+                <h2 className="text-sm font-black uppercase tracking-widest text-gray-500">Recent Activity</h2>
+                <button onClick={() => setMobileActiveTab('orders')} className="text-xs font-bold text-indigo-500">View All</button>
+              </div>
+              <div className="space-y-3">
+                {orders.slice(0, 5).map(o => (
+                  <article key={o.id} onClick={() => setModal({ type: 'view', data: o.id })} className="bg-card border border-token rounded-2xl p-4 active:scale-95 transition-all">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-[10px] font-mono font-bold text-gray-500">{o.orderNumber}</span>
+                      <StatusBadge status={o.status} />
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <p className="text-sm font-bold">{o.customerName}</p>
+                        <p className="text-[10px] text-gray-500 truncate max-w-[150px]">{o.productName}</p>
+                      </div>
+                      <p className="text-base font-black">{fmtCurrency(o.amount)}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* ── MOBILE CARDS ───────────────────────────────────────────────── */}
-          <div className="block md:hidden px-4 pb-4 space-y-3">
-            {filteredOrders.length === 0 ? (
-              <div className="rounded-2xl border border-token bg-card p-8 text-center">
-                <Package className="mx-auto mb-3" size={36} style={{color:'var(--text-sub)'}} />
-                <p className="text-gray-400 font-medium mb-1" style={{color:'var(--text-muted)'}}>No orders found</p>
-                <p className="text-sm" style={{color:'var(--text-sub)'}}>
-                  {searchQ ? `No results for "${searchQ}"` : "Upload your first PDF to get started 🚀"}
-                </p>
+          {mobileActiveTab === "orders" && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-base font-black">Orders ({filteredOrders.length})</h2>
+                <FilterBar filters={filters} setFilters={setFilters} presets={presets} onSavePreset={handleSavePreset} onDeletePreset={handleDeletePreset} onApplyPreset={p => setFilters(p.filters)} />
               </div>
-            ) : filteredOrders.map((o) => {
-              const overdue = isOverdue(o);
-              const isMenuOpen = mobileMenuId === o.id;
-              return (
-                <article
-                  key={o.id}
-                  className={`rounded-2xl border p-4 shadow-sm ${overdue ? "border-red-500/20 bg-red-500/5" : "border-token bg-card"}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <input
-                        type="checkbox"
-                        className="mt-1 accent-indigo-500"
-                        checked={selected.has(o.id)}
-                        onChange={(e) => {
-                          const n = new Set(selected);
-                          e.target.checked ? n.add(o.id) : n.delete(o.id);
-                          setSelected(n);
-                        }}
-                      />
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{color:'var(--text-sub)'}}>Order ID</p>
-                        <p className="mt-0.5 font-mono text-sm font-semibold truncate" style={{color:'var(--text)'}}>{o.orderNumber}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setMobileMenuId(isMenuOpen ? null : o.id)}
-                      className="p-2 rounded-lg hover:bg-[#1F2937] transition-colors"
-                      aria-label="Order actions"
-                      style={{color:'var(--text-muted)'}}
-                    >
-                      <MoreHorizontal size={16} />
-                    </button>
-                  </div>
-
-                  <div className="mt-4 flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-base font-semibold truncate" style={{color:'var(--text)'}}>{o.customerName}</p>
-                      {o.customerPhone && <p className="text-xs mt-0.5" style={{color:'var(--text-muted)'}}>{o.customerPhone}</p>}
-                    </div>
-                    <p className="text-xl font-black whitespace-nowrap" style={{color:'var(--text)'}}>{fmtCurrency(o.amount)}</p>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <StatusBadge status={o.status} />
-                    {o.starred && <span className="text-xs text-amber-400">★ Starred</span>}
-                    {overdue && <span className="text-xs text-red-400 font-medium">Overdue</span>}
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <p className="mb-0.5" style={{color:'var(--text-sub)'}}>Date</p>
-                      <p className="font-medium" style={{color:'var(--text)'}}>{fmtDate(o.date)}</p>
-                    </div>
-                    <div>
-                      <p className="mb-0.5" style={{color:'var(--text-sub)'}}>Product</p>
-                      <p className="font-medium truncate" title={o.productName} style={{color:'var(--text)'}}>{o.productName}</p>
-                    </div>
-                    <div>
-                      <p className="mb-0.5" style={{color:'var(--text-sub)'}}>SKU</p>
-                      <p className="font-mono truncate" style={{color:'var(--text)'}}>{o.sku}</p>
-                    </div>
-                    <div>
-                      <p className="mb-0.5" style={{color:'var(--text-sub)'}}>Customer</p>
-                      <p className="font-medium truncate" style={{color:'var(--text)'}}>{o.customerName}</p>
-                    </div>
-                  </div>
-
-                  {isMenuOpen && (
-                    <div className="mt-4 overflow-hidden rounded-xl border border-token bg-app">
-                      <button onClick={() => { setModal({ type: "view", data: o.id }); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm transition-colors hover:bg-[#1F2937]" style={{color:'var(--text)'}}>View</button>
-                      <button onClick={() => { setModal({ type: "edit", data: o.id }); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm transition-colors hover:bg-[#1F2937] border-t border-token" style={{color:'var(--text)'}}>Edit</button>
-                      <button onClick={() => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); setMobileMenuId(null); }} className="w-full px-4 py-3 text-left text-sm hover:bg-red-500/10 transition-colors border-t border-token" style={{color:'var(--danger)'}}>Delete</button>
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-
-          {/* ── TABLE ──────────────────────────────────────────────────────── */}
-          <div className="hidden md:block overflow-x-auto" style={{ maxHeight: "calc(100vh - 320px)", overflowY: "auto" }}>
-            <table className="w-full text-sm" style={{backgroundColor:'var(--card)'}}>
-              <thead className="sticky top-0 z-10" style={{backgroundColor:'var(--table-head-bg)'}}>
-                <tr style={{borderBottom:'1px solid var(--table-divider)'}}>
-                  <th className="px-4 py-3 w-8">
-                    <input type="checkbox" className="accent-indigo-500" checked={allSelected}
-                      onChange={(e) => setSelected(e.target.checked ? new Set(filteredOrders.map((o) => o.id)) : new Set())} />
-                  </th>
-                  <th className="px-2 py-3 w-5" />
-                  {[ ["date","Date"],["orderNumber","Order ID"],["customerName","Customer"],["productName","Product"],["sku","SKU"],["amount","Amount"],["status","Status"]].map(([col, label]) => (
-                    <th key={col} onClick={(e) => handleSort(col, e.shiftKey)}
-                      className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer whitespace-nowrap select-none transition-colors hover:text-accent"
-                      style={{color:'var(--text-muted)'}}>
-                      <div className="flex items-center gap-1">{label}<SortIcon col={col} /></div>
-                    </th>
-                  ))}
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{color:'var(--text-muted)'}}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-20 text-center">
-                      <Package className="mx-auto mb-4" size={40} style={{color:'var(--text-sub)'}} />
-                      <p className="text-gray-400 font-medium mb-1" style={{color:'var(--text-muted)'}}>No orders found</p>
-                      <p className="text-sm" style={{color:'var(--text-sub)'}}>
-                        {searchQ ? `No results for "${searchQ}"` : "Upload your first PDF to get started 🚀"}
-                      </p>
-                    </td>
-                  </tr>
-                ) : filteredOrders.map((o) => {
-                  const overdue = isOverdue(o);
-                  return (
-                    <tr key={o.id}
-                      className={`group transition-colors even:bg-table-row-even hover:bg-table-row-hover ${overdue ? "bg-red-500/10" : ""}`}
-                      style={{ borderBottom: '1px solid var(--table-divider)' }}
-                      onDoubleClick={() => setModal({ type: "view", data: o.id })}
-                    >
-                      <td className="px-4 py-3.5">
-                        <input type="checkbox" className="accent-indigo-500" checked={selected.has(o.id)}
-                          onChange={(e) => { const n = new Set(selected); e.target.checked ? n.add(o.id) : n.delete(o.id); setSelected(n); }} />
-                      </td>
-                      <td className="px-2 py-3.5 text-center">
-                        {o.starred ? <Star size={12} className="text-amber-400 fill-amber-400" /> : overdue ? <AlertTriangle size={12} className="text-red-400" /> : null}
-                      </td>
-                      <td className="px-3 py-3.5 text-xs whitespace-nowrap" style={{color:'var(--text-muted)'}}>{fmtDate(o.date)}</td>
-                      <td className="px-3 py-3.5">
-                        <span className="font-mono text-xs font-medium transition-colors cursor-pointer hover:text-accent" style={{color:'var(--text)'}} onClick={() => setModal({ type: "view", data: o.id })}>{o.orderNumber}</span>
-                      </td>
-                      <td className="px-3 py-3.5 whitespace-nowrap">
-                        <p className="text-sm font-semibold" style={{color:'var(--text)'}}>{o.customerName}</p>
-                        {o.customerPhone && <p className="text-xs" style={{color:'var(--text-muted)'}}>{o.customerPhone}</p>}
-                      </td>
-                      <td className="px-3 py-3.5 max-w-[160px]">
-                        <p className="text-xs truncate" style={{color:'var(--text-muted)'}} title={o.productName}>{o.productName}</p>
-                      </td>
-                      <td className="px-3 py-3.5 font-mono text-xs whitespace-nowrap" style={{color:'var(--text-muted)'}}>{o.sku}</td>
-                      <td className="px-3 py-3.5 font-semibold whitespace-nowrap text-sm" style={{color:'var(--text)'}}>{fmtCurrency(o.amount)}</td>
-                      <td className="px-3 py-3.5"><StatusBadge status={o.status} /></td>
-                      <td className="px-3 py-3.5">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <button onClick={() => setModal({ type: "view", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg transition-colors" title="View" style={{color:'var(--text-muted)'}}><Eye size={13} /></button>
-                          <button onClick={() => setModal({ type: "edit", data: o.id })} className="p-1.5 hover:bg-[#374151] rounded-lg transition-colors" title="Edit" style={{color:'var(--text-muted)'}}><Edit size={13} /></button>
-                          <button onClick={() => handlePrintLabel(o)} className={`p-1.5 rounded-lg transition-colors ${o.labelBase64 ? "hover:bg-indigo-500/10 hover:text-accent" : "opacity-50 cursor-not-allowed"}`} title={o.labelBase64 ? "Print uploaded label" : "No uploaded label"} disabled={!o.labelBase64} style={{color:'var(--text-muted)'}}><Printer size={13} /></button>
-                          <button onClick={() => { if (window.confirm("Delete this order?")) handleDeleteOrder(o.id); }} className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors" title="Delete" style={{color:'var(--text-muted)'}}><Trash2 size={13} /></button>
+              <div className="space-y-3">
+                {filteredOrders.map(o => {
+                   const isMenuOpen = mobileMenuId === o.id;
+                   return (
+                    <article key={o.id} className="bg-card border border-token rounded-2xl p-4 transition-all">
+                      <div className="flex justify-between items-start">
+                        <div onClick={() => setModal({ type: 'view', data: o.id })} className="flex-1">
+                          <p className="text-[10px] font-mono text-gray-500">{o.orderNumber}</p>
+                          <p className="text-sm font-bold mt-1">{o.customerName}</p>
                         </div>
-                      </td>
-                    </tr>
-                  );
+                        <button onClick={() => setMobileMenuId(isMenuOpen ? null : o.id)} className="p-2 text-gray-500"><MoreHorizontal size={18} /></button>
+                      </div>
+                      <div className="flex justify-between items-end mt-3" onClick={() => setModal({ type: 'view', data: o.id })}>
+                        <div><StatusBadge status={o.status} /><p className="text-[10px] text-gray-500 mt-1">{fmtDate(o.date)}</p></div>
+                        <p className="text-lg font-black">{fmtCurrency(o.amount)}</p>
+                      </div>
+                      {isMenuOpen && (
+                        <div className="mt-4 pt-3 border-t border-token flex justify-around">
+                          <button onClick={() => setModal({ type:'view', data:o.id })} className="flex flex-col items-center gap-1 text-[10px] font-bold"><Eye size={16} /> View</button>
+                          <button onClick={() => setModal({ type:'edit', data:o.id })} className="flex flex-col items-center gap-1 text-[10px] font-bold"><Edit size={16} /> Edit</button>
+                          <button onClick={() => { if(confirm('Delete?')) handleDeleteOrder(o.id); }} className="flex flex-col items-center gap-1 text-[10px] font-bold text-red-500"><Trash2 size={16} /> Delete</button>
+                        </div>
+                      )}
+                    </article>
+                   )
                 })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Table footer */}
-          <div className="hidden md:flex px-6 py-3 border-t border-token items-center justify-between text-xs" style={{color:'var(--text-muted)'}}>
-            <span>{orders.length} total orders · Cloud persistence · <button onClick={() => setModal({ type: "shortcuts" })} className="hover:text-accent underline">shortcuts</button></span>
-            <span className="flex items-center gap-1.5">
-              {isOnline ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Online</> : <><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Offline</>}
-            </span>
-          </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
-      <div className="md:hidden fixed bottom-5 right-5 z-40">
-        {mobileFabOpen && (
-          <div className="mb-3 flex flex-col gap-2 items-end">
-            <button onClick={() => { setModal({ type: "upload" }); setMobileFabOpen(false); }} className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#111827] border border-[#1F2937] text-sm font-medium text-gray-200 shadow-2xl">
-              <Upload size={13} /> Upload PDF
-            </button>
-            <button onClick={() => { setModal({ type: "newOrder" }); setMobileFabOpen(false); }} className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-600 text-sm font-semibold text-white shadow-2xl">
-              <Plus size={13} /> New Order
-            </button>
-          </div>
-        )}
-        <button
-          onClick={() => setMobileFabOpen((prev) => !prev)}
-          className="h-14 w-14 rounded-full bg-indigo-600 text-white shadow-2xl flex items-center justify-center border border-indigo-500/40"
-          aria-label="Open quick actions"
-        >
-          <Plus size={20} className={`transition-transform ${mobileFabOpen ? "rotate-45" : "rotate-0"}`} />
-        </button>
+      <div className="md:hidden bottom-nav">
+        <button onClick={() => setMobileActiveTab("home")} className={`bottom-nav-item ${mobileActiveTab === "home" ? "active" : ""}`}><Home size={20} /><span>Home</span></button>
+        <button onClick={() => setMobileActiveTab("orders")} className={`bottom-nav-item ${mobileActiveTab === "orders" ? "active" : ""}`}><Package size={20} /><span>Orders</span></button>
+        <div className="flex-1 flex justify-center -mt-8">
+           <button onClick={() => setMobileFabOpen(true)} className="h-14 w-14 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center border-4 border-app"><Plus size={24} /></button>
+        </div>
+        <button onClick={() => setAnalyticsOpen(true)} className={`bottom-nav-item ${analyticsOpen ? "active" : ""}`}><TrendingUp size={20} /><span>Insights</span></button>
+        <button onClick={() => setModal({ type: 'shortcuts' })} className="bottom-nav-item"><Keyboard size={20} /><span>Tools</span></button>
       </div>
 
-      {/* ── MODALS ─────────────────────────────────────────────────────────── */}
+      {mobileFabOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setMobileFabOpen(false)}>
+           <div className="absolute bottom-24 right-6 flex flex-col gap-3 items-end">
+              <button onClick={() => { setModal({ type: 'upload' }); setMobileFabOpen(false); }} className="flex items-center gap-2 px-4 py-2.5 bg-card border border-token rounded-full text-sm font-bold"><Upload size={14} /> Upload PDF</button>
+              <button onClick={() => { setModal({ type: 'newOrder' }); setMobileFabOpen(false); }} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-bold"><Plus size={14} /> New Order</button>
+           </div>
+        </div>
+      )}
 
-      <Modal open={modal?.type === "newOrder"} onClose={() => setModal(null)} title="New Order" size="max-w-3xl">
-        <OrderForm initial={EMPTY_ORDER} onSave={(f) => handleAddOrder(f, false)} onCancel={() => setModal(null)} />
+      <Modal open={modal?.type === 'newOrder'} title="New Order" onClose={() => setModal(null)} size="max-w-3xl">
+        <OrderForm initial={EMPTY_ORDER} onSave={f => handleAddOrder(f)} onCancel={() => setModal(null)} />
       </Modal>
-
-      {modal?.type === "edit" && activeOrder && (
-        <Modal open onClose={() => setModal(null)} title={`Edit — ${activeOrder.orderNumber}`} size="max-w-3xl">
-          <OrderForm initial={activeOrder} onSave={(f) => handleAddOrder(f, true, activeOrder.id)} onCancel={() => setModal(null)} isEdit />
+      {modal?.type === 'edit' && activeOrder && (
+        <Modal open title="Edit Order" onClose={() => setModal(null)} size="max-w-3xl">
+          <OrderForm initial={activeOrder} isEdit onSave={f => handleAddOrder(f, true, activeOrder.id)} onCancel={() => setModal(null)} />
         </Modal>
       )}
-
-      {modal?.type === "view" && activeOrder && (
-        <OrderDetailModal order={activeOrder} onClose={() => setModal(null)}
-          onEdit={() => setModal({ type: "edit", data: activeOrder.id })}
-          onDelete={(id) => { handleDeleteOrder(id); setModal(null); }}
-          onAddNote={addNote} onToggleStar={toggleStar}
-        />
+      {modal?.type === 'view' && activeOrder && (
+        <OrderDetailModal order={activeOrder} onClose={() => setModal(null)} onEdit={() => setModal({ type: 'edit', data: activeOrder.id })} onDelete={handleDeleteOrder} onAddNote={addNote} onToggleStar={toggleStar} />
       )}
-
-      <Modal open={modal?.type === "upload"} onClose={() => setModal(null)} title="AI Label Reader" size="max-w-xl">
+      <Modal open={modal?.type === 'upload'} title="AI Label Reader" onClose={() => setModal(null)} size="max-w-xl">
         <PDFUploader existingOrders={orders} onParsed={handleParsed} addToast={addToast} onClose={() => setModal(null)} />
-        <div className="mt-4 pt-4 border-t border-[#1F2937]">
-          <button onClick={() => setModal({ type: "newOrder" })} className="w-full py-2.5 border border-dashed border-[#1F2937] hover:border-indigo-500/50 text-gray-600 hover:text-gray-400 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
-            <Plus size={13} /> Add Manually Instead
-          </button>
+      </Modal>
+      <Modal open={modal?.type === 'shortcuts'} title="Shortcuts" onClose={() => setModal(null)} size="max-w-sm">
+        <div className="space-y-2 text-sm text-gray-400">
+          <div className="flex justify-between"><span>New Order</span><kbd className="bg-subtle px-1.5 rounded">N</kbd></div>
+          <div className="flex justify-between"><span>Search</span><kbd className="bg-subtle px-1.5 rounded">/</kbd></div>
         </div>
       </Modal>
 
-      {modal?.type === "shortcuts" && (
-        <Modal open onClose={() => setModal(null)} title="Keyboard Shortcuts" size="max-w-sm">
-          <div className="space-y-1">
-            {[["/","Focus search"],["N","New order"],["U","Upload PDF"],["?","Show shortcuts"],["Esc","Close modal"],["Double-click row","View order"]].map(([k, v]) => (
-              <div key={k} className="flex items-center justify-between py-2 border-b border-[#1F2937] last:border-0">
-                <span className="text-sm text-gray-400">{v}</span>
-                <kbd className="px-2 py-1 bg-[#1F2937] text-gray-300 rounded text-xs font-mono">{k}</kbd>
-              </div>
-            ))}
-          </div>
-        </Modal>
-      )}
-
       <ToastContainer toasts={toasts} remove={removeToast} />
-
-      <AnalyticsDashboard open={analyticsOpen} onClose={closeAnalytics} orders={orders} darkMode={darkMode} />
+      <AnalyticsDashboard open={analyticsOpen} onClose={() => setAnalyticsOpen(false)} orders={orders} darkMode={darkMode} />
     </div>
   );
 }
