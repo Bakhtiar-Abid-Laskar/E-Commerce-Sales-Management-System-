@@ -409,7 +409,7 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
     } else {
       onParsed(formData, "new");
       addToast(`"${parsedResults[currentIdx]?.fileName}" added ✓`, "success");
-      setReviewModal(null);
+      // Advance to next without clearing reviewModal first to prevent flicker/unmount
       advanceReview(parsedResults, currentIdx + 1);
     }
   };
@@ -418,7 +418,6 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
   const handleReviewSkip = () => {
     const currentIdx = reviewIndex ?? 0;
     addToast(`Skipped "${parsedResults[currentIdx]?.fileName}"`, "info");
-    setReviewModal(null);
     advanceReview(parsedResults, currentIdx + 1);
   };
 
@@ -532,6 +531,7 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
           onClose={handleReviewSkip}
         >
           <OrderForm
+            key={reviewIndex ?? 0}
             initial={{ ...EMPTY_ORDER, ...reviewModal.data }}
             onSave={handleReviewSave}
             onCancel={handleReviewSkip}
