@@ -62,7 +62,7 @@ const COLORS = {
 
 const STATUS_COLORS: Record<string, string> = {
   Processing: COLORS.warning,
-  Packed: COLORS.secondary,
+  Packed: COLORS.muted,
   Dispatched: COLORS.info,
   Delivered: COLORS.success,
   Cancelled: COLORS.danger,

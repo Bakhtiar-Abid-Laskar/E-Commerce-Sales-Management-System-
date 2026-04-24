@@ -157,17 +157,17 @@ body {
 .badge-processing {
   background-color: var(--warning-bg);
   color:            var(--warning);
-  border:           1px solid rgba(245, 158, 11, 0.25);
+  border:           1px solid rgba(217, 119, 6, 0.25);
 }
 .badge-packed {
+  background-color: var(--bg-subtle);
+  color:            var(--text-muted);
+  border:           1px solid var(--border);
+}
+.badge-dispatched {
   background-color: var(--blue-bg);
   color:            var(--blue);
   border:           1px solid rgba(37, 99, 235, 0.25);
-}
-.badge-dispatched {
-  background-color: var(--violet-bg);
-  color:            var(--violet);
-  border:           1px solid rgba(124, 58, 237, 0.25);
 }
 .badge-delivered {
   background-color: var(--success-bg);

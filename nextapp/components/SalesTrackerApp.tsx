@@ -13,6 +13,7 @@ import {
   RotateCcw, Home, Zap, Camera, Hash, Share2,
   MapPin, Phone, User, CreditCard, Calendar, Weight as WeightIcon,
   CheckSquare, XCircle, LogOut, ExternalLink as ExternalLinkIcon,
+  Settings, Mailbox, Plane, Wallet,
 } from "lucide-react";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useRouter } from "next/navigation";
@@ -360,9 +361,11 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
 
   const handleDup = (action: "update" | "new" | "discard") => {
     if (!dupWarning) return;
+    const currentIdx = reviewIndex ?? 0;
     if (action === "update") { onParsed(dupWarning.formData, "update", dupWarning.dupOrder.id); addToast("Updated ✓", "success"); }
     else if (action === "new") { onParsed(dupWarning.formData, "new"); addToast("Added new ✓", "success"); }
-    setDupWarning(null); advanceReview(parsedResults, (reviewIndex ?? 0) + 1);
+    setDupWarning(null); 
+    advanceReview(parsedResults, currentIdx + 1);
   };
 
   return (
@@ -500,43 +503,106 @@ function TrackingPage({ orderNumber, orders, onBack }: { orderNumber: string; or
 
 function KPICards({ orders, onFilter, onOpenAnalytics }: { orders: Order[]; onFilter: (f: Record<string, unknown>) => void; onOpenAnalytics: () => void }) {
   const stats = useMemo(() => {
-    const revenue = orders.filter((o) => o.orderType !== "Return").reduce((s, o) => s + Number(o.amount || 0), 0);
+    const revenueData = orders
+      .filter((o) => o.orderType !== "Return")
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const revenue = revenueData.reduce((s, o) => s + Number(o.amount || 0), 0);
     const total = orders.length;
     const dispatched = orders.filter((o) => o.status === "Dispatched" || o.status === "Delivered").length;
     const processing = orders.filter((o) => o.status === "Processing").length;
     const packed = orders.filter((o) => o.status === "Packed").length;
     const shipped = orders.filter((o) => o.status === "Dispatched").length;
     const delivered = orders.filter((o) => o.status === "Delivered").length;
-    return { revenue, total, dispatched, processing, packed, shipped, delivered };
+
+    // Generate sparkline data for revenue
+    const revenueByDate: Record<string, number> = {};
+    revenueData.forEach(o => {
+      const d = o.date;
+      revenueByDate[d] = (revenueByDate[d] || 0) + Number(o.amount);
+    });
+    const sparkData = Object.values(revenueByDate).slice(-7);
+    if (sparkData.length < 2) sparkData.unshift(0, 0);
+
+    return { revenue, total, dispatched, processing, packed, shipped, delivered, sparkData };
   }, [orders]);
+
   const dispatchRate = stats.total ? Math.round((stats.dispatched / stats.total) * 100) : 0;
+  
   const cards = [
-    { label: "Total Revenue", value: fmtCurrency(stats.revenue), sub: `${stats.total} orders`, filter: {}, full: true },
-    { label: "Total Orders", value: stats.total, sub: "all time", filter: {} },
-    { label: "Dispatch Rate", value: `${dispatchRate}%`, sub: `${stats.dispatched} shipped`, filter: { status: ["Dispatched", "Delivered"] } },
+    { 
+      label: "Total Revenue", 
+      value: fmtCurrency(stats.revenue), 
+      sub: `${stats.total} orders`, 
+      filter: {}, 
+      full: true,
+      icon: Wallet,
+      accent: true,
+      sparkline: stats.sparkData
+    },
+    { label: "Total Orders", value: stats.total, sub: "all time", filter: {}, icon: Package },
+    { label: "Dispatch Rate", value: `${dispatchRate}%`, sub: `${stats.dispatched} dispatched`, filter: { status: ["Dispatched", "Delivered"] }, icon: Truck },
   ];
+
   const bottom = [
-    { label: "Processing", value: stats.processing, icon: Clock, filter: { status: ["Processing"] } },
-    { label: "Packed", value: stats.packed, icon: Package, filter: { status: ["Packed"] } },
-    { label: "Shipped", value: stats.shipped, icon: Truck, filter: { status: ["Dispatched"] } },
-    { label: "Delivered", value: stats.delivered, icon: CheckCircle, filter: { status: ["Delivered"] } },
+    { label: "Processing", value: stats.processing, icon: Settings, filter: { status: ["Processing"] }, color: "var(--warning)" },
+    { label: "Packed", value: stats.packed, icon: Mailbox, filter: { status: ["Packed"] }, color: "var(--text-muted)" },
+    { label: "Shipped", value: stats.shipped, icon: Plane, filter: { status: ["Dispatched"] }, color: "var(--blue)" },
+    { label: "Delivered", value: stats.delivered, icon: CheckCircle, filter: { status: ["Delivered"] }, color: "var(--success)" },
   ];
+
   return (
-    <div className="mb-8 space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div className="mb-6 space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         {cards.map((c, i) => (
-          <button key={i} onClick={() => i === 0 ? onOpenAnalytics() : onFilter(c.filter)} className={`kpi-card rounded-2xl p-5 text-left border border-transparent hover:border-indigo-400/40 transition ${c.full ? 'md:col-span-2' : ''}`}>
-            <p className="kpi-label text-xs mb-1">{c.label}</p>
-            <p className="kpi-value text-2xl font-black">{c.value}</p>
-            <p className="kpi-sub text-[10px] mt-1 opacity-60">{c.sub}</p>
+          <button 
+            key={i} 
+            onClick={() => i === 0 ? onOpenAnalytics() : onFilter(c.filter)} 
+            className={`kpi-card relative overflow-hidden rounded-2xl p-4 text-left border transition-all active:scale-[0.98] ${
+              c.full ? 'md:col-span-2' : ''
+            } ${c.accent ? 'border-indigo-500/30 bg-indigo-500/5' : 'border-token'}`}
+          >
+            <div className="flex justify-between items-start mb-1">
+              <div className="flex items-center gap-2">
+                <c.icon size={14} className={c.accent ? 'text-indigo-500' : 'text-gray-500'} />
+                <p className={`kpi-label text-[10px] uppercase font-bold tracking-wider ${c.accent ? 'text-indigo-500/80' : 'text-gray-500'}`}>{c.label}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-end justify-between">
+              <div>
+                <p className={`font-black leading-none ${c.accent ? 'text-3xl text-indigo-500' : 'text-xl'}`}>{c.value}</p>
+                <p className="kpi-sub text-[10px] mt-1 opacity-60 font-medium">{c.sub}</p>
+              </div>
+              {c.sparkline && (
+                <div className="mb-1">
+                  <Sparkline data={c.sparkline} color="#6366F1" w={80} h={30} />
+                </div>
+              )}
+            </div>
+            
+            {c.accent && <div className="absolute top-0 right-0 p-3 opacity-10"><c.icon size={64} /></div>}
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {bottom.map((c, i) => (
-          <button key={i} onClick={() => onFilter(c.filter)} className="kpi-card rounded-2xl p-4 text-left">
-            <p className="kpi-label text-[10px] mb-1">{c.label}</p>
-            <p className="kpi-value text-xl font-bold">{c.value}</p>
+          <button 
+            key={i} 
+            onClick={() => onFilter(c.filter)} 
+            className="kpi-card rounded-2xl p-3 text-left border border-token active:scale-[0.98] transition-all flex flex-col justify-between h-24"
+            style={{ borderLeft: `3px solid ${c.color}` }}
+          >
+            <div className="flex items-center gap-1.5 mb-1">
+              <c.icon size={12} style={{ color: c.color }} />
+              <p className="kpi-label text-[9px] font-bold text-gray-500 truncate">{c.label}</p>
+            </div>
+            {c.value === 0 ? (
+              <p className="text-[10px] font-medium text-emerald-500 flex items-center gap-1">All clear <CheckCircle size={10} /></p>
+            ) : (
+              <p className="text-xl font-black">{c.value}</p>
+            )}
           </button>
         ))}
       </div>
@@ -583,10 +649,24 @@ function FilterBar({ filters, setFilters, presets, onSavePreset, onDeletePreset,
 // ─── MAIN SALES TRACKER APP ───────────────────────────────────────────────────
 
 export default function SalesTrackerApp() {
-  useEffect(() => { hydrateStore(); }, []);
   const router = useRouter();
   const supabase = createClient();
-  const { orders, presets, addOrder, deleteOrder, updateStatus, addNote, toggleStar, savePreset, deletePreset, toggleDarkMode, darkMode } = useSalesStore();
+  const { orders, presets, setOrders, addOrder, deleteOrder, updateStatus, addNote, toggleStar, savePreset, deletePreset, toggleDarkMode, darkMode } = useSalesStore();
+
+  useEffect(() => { 
+    hydrateStore();
+    
+    // ─── Supabase Realtime ───
+    const channel = supabase
+      .channel("realtime-orders")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, async () => {
+        const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
+        if (data) setOrders(data as Order[]);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/auth/login'); };
 
@@ -608,6 +688,17 @@ export default function SalesTrackerApp() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // ─── Keyboard Shortcuts ───
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key.toLowerCase() === "n") { e.preventDefault(); setModal({ type: "newOrder" }); }
+      if (e.key === "/") { e.preventDefault(); if (window.innerWidth < 768) setMobileSearchOpen(true); searchRef.current?.focus(); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   useEffect(() => {
     setIsOnline(navigator.onLine);
     const on = () => setIsOnline(true); const off = () => setIsOnline(false);
@@ -628,7 +719,15 @@ export default function SalesTrackerApp() {
   }, []);
   const removeToast = useCallback((id: string) => setToasts(p => p.filter(x => x.id !== id)), []);
 
-  const handleAddOrder = (f: Partial<Order>, isEdit = false, id?: string) => { addOrder(f, isEdit, id); addToast(isEdit ? "Updated" : "Added", "success"); setModal(null); };
+  const handleAddOrder = (f: Partial<Order>, isEdit = false, id?: string) => { 
+    if (!f.customerName || !f.productName || !f.amount) {
+      addToast("Required: Name, Product, Amount", "warning");
+      return;
+    }
+    addOrder(f, isEdit, id); 
+    addToast(isEdit ? "Updated" : "Added", "success"); 
+    setModal(null); 
+  };
   const handleDeleteOrder = (id: string) => { deleteOrder(id); addToast("Deleted", "delete"); };
   const handlePrintLabel = (o: Order) => { if (o.labelBase64) window.open(`data:${o.labelMimeType};base64,${o.labelBase64}`, "_blank"); };
   const handleParsed = (d: Partial<Order>, a: "new"|"update", id?: string) => { handleAddOrder(d, a === "update", id); };
@@ -649,6 +748,14 @@ export default function SalesTrackerApp() {
   }, [orders, searchQ, filters, sortConfig]);
 
   const handleSort = (col: string) => setSortConfig(p => [{ col, dir: p[0]?.col === col && p[0].dir === "asc" ? "desc" : "asc" }]);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await hydrateStore();
+    setTimeout(() => setRefreshing(false), 1000);
+    addToast("Data refreshed", "success");
+  };
 
   const activeOrder = (modal?.type === "view" || modal?.type === "edit") ? orders.find(o => o.id === modal?.data) : null;
 
@@ -675,7 +782,7 @@ export default function SalesTrackerApp() {
         </div>
       </nav>
 
-      <main className="max-w-screen-2xl mx-auto px-4 py-6 pb-24">
+      <main className="max-w-screen-2xl mx-auto px-4 py-6 pb-32">
         {/* Desktop View */}
         <div className="hidden md:block space-y-6">
           <KPICards orders={orders} onFilter={setFilters} onOpenAnalytics={() => setAnalyticsOpen(true)} />
@@ -719,32 +826,60 @@ export default function SalesTrackerApp() {
 
         {/* Mobile View */}
         <div className="md:hidden space-y-4">
+          {refreshing && (
+            <div className="flex justify-center py-2 animate-bounce">
+              <RefreshCw size={16} className="text-indigo-500 animate-spin" />
+            </div>
+          )}
+          
           {mobileActiveTab === "home" && (
-            <div className="space-y-6">
+            <div className="space-y-6" onTouchStart={(e) => {
+              if (window.scrollY === 0) {
+                const touch = e.touches[0];
+                const startY = touch.screenY;
+                const handleMove = (moveEvent: TouchEvent) => {
+                  if (moveEvent.touches[0].screenY - startY > 100) {
+                    handleRefresh();
+                    document.removeEventListener('touchmove', handleMove);
+                  }
+                };
+                document.addEventListener('touchmove', handleMove, { once: true });
+              }
+            }}>
               <KPICards orders={orders} onFilter={f => { setFilters(f); setMobileActiveTab('orders'); }} onOpenAnalytics={() => setAnalyticsOpen(true)} />
+              
               <div className="flex justify-between items-center px-1">
-                <h2 className="text-sm font-black uppercase tracking-widest text-gray-500">Recent Activity</h2>
-                <button onClick={() => setMobileActiveTab('orders')} className="text-xs font-bold text-indigo-500">View All</button>
+                <h2 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500">Recent Activity</h2>
+                <button onClick={() => setMobileActiveTab('orders')} className="text-xs font-bold text-indigo-500 flex items-center gap-1">View All <ExternalLinkIcon size={10} /></button>
               </div>
-              <div className="space-y-3">
-                {orders.slice(0, 5).map(o => (
-                  <article key={o.id} onClick={() => setModal({ type: 'view', data: o.id })} className="bg-card border border-token rounded-2xl p-4 active:scale-95 transition-all">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[10px] font-mono font-bold text-gray-500">{o.orderNumber}</span>
-                      <StatusBadge status={o.status} />
-                    </div>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-sm font-bold">{o.customerName}</p>
-                        <p className="text-[10px] text-gray-500 truncate max-w-[150px]">{o.productName}</p>
+              
+              <div className="space-y-3 pb-8">
+                {orders.length === 0 ? (
+                  <div className="bg-card border border-dashed border-token rounded-2xl p-8 text-center">
+                    <Package size={32} className="mx-auto mb-2 text-gray-300 opacity-50" />
+                    <p className="text-sm text-gray-500 font-medium">No orders yet</p>
+                  </div>
+                ) : (
+                  orders.slice(0, 5).map(o => (
+                    <article key={o.id} onClick={() => setModal({ type: 'view', data: o.id })} className="bg-card border border-token rounded-2xl p-3.5 active:scale-[0.98] transition-all shadow-sm">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[10px] font-mono font-bold text-gray-400">{o.orderNumber}</span>
+                        <StatusBadge status={o.status} />
                       </div>
-                      <p className="text-base font-black">{fmtCurrency(o.amount)}</p>
-                    </div>
-                  </article>
-                ))}
+                      <div className="flex justify-between items-end">
+                        <div className="min-w-0 flex-1 pr-4">
+                          <p className="text-sm font-bold truncate">{o.customerName}</p>
+                          <p className="text-[10px] text-gray-500 truncate mt-0.5">{o.productName}</p>
+                        </div>
+                        <p className="text-base font-black shrink-0">{fmtCurrency(o.amount)}</p>
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </div>
           )}
+
 
           {mobileActiveTab === "orders" && (
             <div className="space-y-4">
