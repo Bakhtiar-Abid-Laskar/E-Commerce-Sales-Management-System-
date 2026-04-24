@@ -280,6 +280,7 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
   const [dupWarning, setDupWarning] = useState<{ formData: Partial<Order>; dupOrder: Order } | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const PARSE_CONCURRENCY = 3;
 
   const toBase64 = (file: File): Promise<string> =>
     new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res((r.result as string).split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
@@ -296,49 +297,87 @@ function PDFUploader({ onParsed, existingOrders, addToast, onClose }: {
     setQueue(valid.map((f) => ({ file: f, name: f.name, status: "pending", result: null, error: null, progress: 0 })));
   };
 
+  const updateQueueItem = (index: number, patch: Partial<QItem>) => {
+    setQueue((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  };
+
+  const parseFile = async (file: File) => {
+    const b64 = await toBase64(file);
+    const mimeType = file.type || "application/pdf";
+    const res = await fetch("/api/parse-label", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base64: b64, mimeType }),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || "Parse failed");
+
+    return {
+      data: { ...json.data, labelBase64: b64, labelMimeType: mimeType } as Partial<Order>,
+      base64: b64,
+      mimeType,
+    };
+  };
+
+  const runWithConcurrency = async <T,>(items: T[], limit: number, worker: (item: T, index: number) => Promise<void>) => {
+    let nextIndex = 0;
+    const active = new Set<Promise<void>>();
+
+    const schedule = () => {
+      if (nextIndex >= items.length) return;
+      const index = nextIndex++;
+      const task = worker(items[index], index).finally(() => {
+        active.delete(task);
+      });
+      active.add(task);
+    };
+
+    while (nextIndex < items.length || active.size > 0) {
+      while (nextIndex < items.length && active.size < limit) {
+        schedule();
+      }
+
+      if (active.size === 0) break;
+
+      await Promise.race(active);
+    }
+  };
+
   // ── STEP 1: Parse ALL files first, collect results ────────────────────────────
   const startParsing = async () => {
     if (!queue.length) return;
     setParsing(true);
-    let updated = [...queue];
-    const collected: { data: Partial<Order>; fileName: string }[] = [];
+    const updated = [...queue];
+    const results: Array<{ data: Partial<Order>; fileName: string } | null> = Array(updated.length).fill(null);
 
-    for (let i = 0; i < updated.length; i++) {
-      updated[i] = { ...updated[i], status: "parsing", progress: 30 };
-      setQueue([...updated]);
+    await runWithConcurrency(updated, PARSE_CONCURRENCY, async (item, index) => {
+      updateQueueItem(index, { status: "parsing", progress: 25 });
       try {
-        const b64 = await toBase64(updated[i].file);
-        const mimeType = updated[i].file.type || "application/pdf";
-        updated[i] = { ...updated[i], progress: 60, base64: b64 };
-        setQueue([...updated]);
-        const res = await fetch("/api/parse-label", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64: b64, mimeType }),
-        });
-        const json = await res.json();
-        if (!res.ok || json.error) throw new Error(json.error || "Parse failed");
-        // Attach the label image/PDF to the parsed data so it can be printed later
-        const dataWithLabel: Partial<Order> = { ...json.data, labelBase64: b64, labelMimeType: mimeType };
-        updated[i] = { ...updated[i], status: "done", progress: 100, result: dataWithLabel };
-        setQueue([...updated]);
-        collected.push({ data: dataWithLabel, fileName: updated[i].name });
+        updateQueueItem(index, { progress: 40 });
+        const { data: dataWithLabel, base64, mimeType } = await parseFile(item.file);
+        updateQueueItem(index, { status: "done", progress: 100, result: dataWithLabel, base64 });
+        results[index] = { data: dataWithLabel, fileName: item.name };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        updated[i] = { ...updated[i], status: "failed", progress: 100, error: msg };
-        setQueue([...updated]);
-        addToast(`Failed to parse "${updated[i].name}": ${msg}`, "error");
+        updateQueueItem(index, { status: "failed", progress: 100, error: msg });
+        addToast(`Failed to parse "${item.name}": ${msg}`, "error");
       }
-      if (i < updated.length - 1) await new Promise((r) => setTimeout(r, 400));
-    }
+    });
 
     setParsing(false);
 
-    // ── STEP 2: Open sequential review for every successfully-parsed result ─────
-    if (collected.length > 0) {
-      setParsedResults(collected);
+    // ── STEP 2: Extract only successful results while maintaining order ─────
+    const successfulResults: { data: Partial<Order>; fileName: string }[] = [];
+    for (const item of results) {
+      if (item !== null) {
+        successfulResults.push(item);
+      }
+    }
+
+    if (successfulResults.length > 0) {
+      setParsedResults(successfulResults);
       setReviewIndex(0);
-      setReviewModal(collected[0]);
+      setReviewModal(successfulResults[0]);
     } else {
       addToast("No files could be parsed successfully", "warning");
     }
