@@ -40,13 +40,13 @@ interface GeminiGenerateContentResponse {
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
-  retries = 3,
-  backoff = 1000
+  retries = 2,
+  backoff = 500
 ): Promise<Response> {
   for (let i = 0; i < retries; i++) {
     const res = await fetch(url, options);
     if (res.status === 503 || res.status === 429) {
-      const wait = backoff * Math.pow(2, i) + Math.random() * 500;
+      const wait = backoff * Math.pow(2, i) + Math.random() * 300;
       console.warn(`Gemini busy (${res.status}). Retrying in ${Math.round(wait)}ms…`);
       await new Promise((r) => setTimeout(r, wait));
       continue;
@@ -54,6 +54,30 @@ async function fetchWithRetry(
     return res;
   }
   return fetch(url, options);
+}
+
+// ─── Helper: Parse comma-separated env vars ───────────────────────────────────
+function parseEnvList(value: string | undefined, fallback: string[]): string[] {
+  if (!value) return fallback;
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+// ─── Helper: Create API key + model combinations ────────────────────────────────
+function getApiKeysAndModels(): { apiKeys: string[]; models: string[] } {
+  const apiKeys = parseEnvList(
+    process.env.GEMINI_API_KEYS,
+    [process.env.GEMINI_API_KEY || ""]
+  ).filter(Boolean);
+
+  const models = parseEnvList(
+    process.env.GEMINI_MODELS,
+    [process.env.GEMINI_MODEL || "gemini-3.1-flash-lite-preview"]
+  );
+
+  return { apiKeys, models };
 }
 
 // ─── Gemini responseSchema — types MUST be uppercase (Gemini API requirement) ─
@@ -150,10 +174,6 @@ expectedDeliveryDate:
 Return null for any field that is genuinely not present on the label.
 Do NOT guess or fabricate values. Only extract what is explicitly visible.`;
 
-function uniqueModels(models: string[]): string[] {
-  return [...new Set(models.map((m) => m.trim()).filter(Boolean))];
-}
-
 // ─── POST /api/parse-label ────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   // ─── Require authentication ────────────────────────────────────────────────────
@@ -164,10 +184,14 @@ export async function POST(req: NextRequest) {
     return authResult;
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const { apiKeys, models } = getApiKeysAndModels();
 
-  if (!apiKey || apiKey === "your_gemini_api_key_here") {
-    return NextResponse.json({ error: "API Key not configured" }, { status: 500 });
+  if (apiKeys.length === 0 || !apiKeys[0]) {
+    return NextResponse.json({ error: "API Keys not configured" }, { status: 500 });
+  }
+
+  if (models.length === 0) {
+    return NextResponse.json({ error: "Models not configured" }, { status: 500 });
   }
 
   let body: { base64: string; mimeType: string };
@@ -191,14 +215,13 @@ export async function POST(req: NextRequest) {
       : "application/pdf";
 
   try {
-    // Model is configurable via GEMINI_MODEL in .env.local
-    // Run GET /api/list-models to see all models available for your API key
-    const configuredModel = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview";
-    const modelCandidates = uniqueModels([
-      configuredModel,
-      "gemini-3.1-flash-lite-preview",
-      "gemini-2.0-flash",
-    ]);
+    // Create all combinations of (apiKey, model) pairs to try
+    const combinations: Array<{ apiKey: string; model: string }> = [];
+    for (const apiKey of apiKeys) {
+      for (const model of models) {
+        combinations.push({ apiKey, model });
+      }
+    }
 
     const requestBody = {
       contents: [
@@ -217,88 +240,100 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    let geminiData: unknown = null;
-    let geminiRes: Response | null = null;
-    let activeModel = configuredModel;
+    let lastError: { status: number; error: unknown } | null = null;
 
-    for (const candidateModel of modelCandidates) {
-      activeModel = candidateModel;
-      geminiRes = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/${candidateModel}:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody),
-        }
-      );
+    // Try each combination of API key and model
+    for (const { apiKey, model } of combinations) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-      geminiData = await geminiRes.json();
+      const geminiRes = await fetchWithRetry(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      const geminiData = await geminiRes.json();
 
       if (geminiRes.ok) {
-        break;
+        // Success! Extract and return the response
+        const geminiJson = geminiData as GeminiGenerateContentResponse;
+
+        const rawText: string =
+          geminiJson.candidates?.[0]?.content?.parts
+            ?.map((p: { text?: string }) => p.text ?? "")
+            .join("") ?? "";
+
+        if (!rawText) {
+          const reason = geminiJson.candidates?.[0]?.finishReason;
+          throw new Error(`Empty response from Gemini. Finish reason: ${reason ?? "unknown"}`);
+        }
+
+        // With responseSchema + responseMimeType="application/json", rawText is already valid JSON
+        let parsed: ParsedLabel;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch {
+          // Fallback: strip any accidental markdown fences
+          const clean = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+          parsed = JSON.parse(clean);
+        }
+
+        return NextResponse.json(parsed);
       }
 
       const errorBody = geminiData as GeminiErrorBody;
       const statusCode = geminiRes.status;
 
-      // If quota is exhausted or model is unavailable, try the next candidate model.
-      if (statusCode === 429 || statusCode === 404) {
-        console.warn(
-          `Gemini model failed (${candidateModel}, status ${statusCode}). Trying fallback model.`
-        );
+      console.warn(
+        `Gemini API error (${model}, key: ${apiKey.slice(0, 8)}..., status ${statusCode}): ${
+          errorBody.error?.message || "Unknown error"
+        }`
+      );
+
+      // If this fails due to being busy (503/429), try the next combination
+      if (statusCode === 503 || statusCode === 429) {
+        lastError = { status: statusCode, error: errorBody };
         continue;
       }
 
-      console.error("Gemini API error:", { model: candidateModel, ...errorBody });
-      return NextResponse.json(
-        {
-          error: errorBody.error?.message || "Gemini API error",
-          model: candidateModel,
-        },
-        { status: statusCode }
-      );
+      // For other errors (404, 400, auth errors), stop and return error
+      if (statusCode === 404 || statusCode === 401 || statusCode === 403) {
+        console.error("Gemini API configuration error:", {
+          model,
+          status: statusCode,
+          error: errorBody,
+        });
+        return NextResponse.json(
+          {
+            error: errorBody.error?.message || "Gemini API configuration error",
+            model,
+          },
+          { status: statusCode }
+        );
+      }
+
+      // For other 4xx/5xx errors, record and try next combination
+      lastError = { status: statusCode, error: errorBody };
     }
 
-    if (!geminiRes || !geminiRes.ok) {
-      const errorBody = geminiData as GeminiErrorBody;
-      console.error("Gemini API error after model fallbacks:", {
-        model: activeModel,
-        ...errorBody,
-      });
-      return NextResponse.json(
-        {
-          error:
-            errorBody.error?.message ||
-            "All configured Gemini models are currently unavailable or over quota",
-          model: activeModel,
-        },
-        { status: geminiRes?.status ?? 429 }
-      );
-    }
+    // If we get here, all combinations failed
+    console.error("All Gemini API combinations exhausted:", {
+      totalCombinations: combinations.length,
+      lastError,
+    });
 
-    const geminiJson = geminiData as GeminiGenerateContentResponse;
+    const statusCode = lastError?.status ?? 503;
+    const errorBody = lastError?.error as GeminiErrorBody | undefined;
 
-    const rawText: string =
-      geminiJson.candidates?.[0]?.content?.parts
-        ?.map((p: { text?: string }) => p.text ?? "")
-        .join("") ?? "";
-
-    if (!rawText) {
-      const reason = geminiJson.candidates?.[0]?.finishReason;
-      throw new Error(`Empty response from Gemini. Finish reason: ${reason ?? "unknown"}`);
-    }
-
-    // With responseSchema + responseMimeType="application/json", rawText is already valid JSON
-    let parsed: ParsedLabel;
-    try {
-      parsed = JSON.parse(rawText);
-    } catch {
-      // Fallback: strip any accidental markdown fences
-      const clean = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-      parsed = JSON.parse(clean);
-    }
-
-    return NextResponse.json({ data: parsed });
+    return NextResponse.json(
+      {
+        error:
+          errorBody?.error?.message ||
+          "All API keys and models are currently unavailable or over quota. Please try again later.",
+        totalCombinations: combinations.length,
+      },
+      { status: statusCode }
+    );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("parse-label error:", msg);
