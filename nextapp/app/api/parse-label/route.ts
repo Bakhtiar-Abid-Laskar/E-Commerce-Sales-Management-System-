@@ -65,8 +65,18 @@ function parseEnvList(value: string | undefined, fallback: string[]): string[] {
     .filter(Boolean);
 }
 
-// ─── Helper: Create API key + model combinations ────────────────────────────────
-function getApiKeysAndModels(): { apiKeys: string[]; models: string[] } {
+// ─── Helper: Get Claude API Keys and Models ────────────────────────────────────
+function getClaudeConfig(): { apiKeys: string[]; models: string[] } {
+  const apiKeys = parseEnvList(process.env.CLAUDE_API_KEYS, []);
+  const models = parseEnvList(
+    process.env.CLAUDE_MODELS,
+    ["claude-3-5-sonnet-20241022"]
+  );
+  return { apiKeys, models };
+}
+
+// ─── Helper: Get Gemini API Keys and Models ────────────────────────────────────
+function getGeminiConfig(): { apiKeys: string[]; models: string[] } {
   const apiKeys = parseEnvList(
     process.env.GEMINI_API_KEYS,
     [process.env.GEMINI_API_KEY || ""]
@@ -78,6 +88,153 @@ function getApiKeysAndModels(): { apiKeys: string[]; models: string[] } {
   );
 
   return { apiKeys, models };
+}
+
+// ─── Helper: Call Claude API ────────────────────────────────────────────────────
+interface ClaudeErrorResponse {
+  error?: {
+    type?: string;
+    message?: string;
+  };
+}
+
+async function callClaudeAPI(
+  apiKey: string,
+  model: string,
+  base64: string,
+  mimeType: string
+): Promise<{ success: boolean; data?: string; status?: number; error?: unknown }> {
+  // Convert base64 to media type for Claude
+  const mediaType = mimeType === "application/pdf" ? "application/pdf" : "image/jpeg";
+  
+  const body = {
+    model,
+    max_tokens: 4096,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mediaType,
+              data: base64,
+            },
+          },
+          {
+            type: "text",
+            text: EXTRACTION_PROMPT + `
+
+Return ONLY valid JSON matching this structure:
+{
+  "productName": string|null,
+  "sku": string|null,
+  "invoiceNumber": string|null,
+  "orderNumber": string|null,
+  "amount": number|null,
+  "customerName": string|null,
+  "courierPartner": string|null,
+  "courierAWB": string|null,
+  "deliveryAddress": string|null,
+  "pincode": string|null,
+  "weight": string|null,
+  "date": string|null,
+  "expectedDeliveryDate": string|null
+}`,
+          },
+        ],
+      },
+    ],
+  };
+
+  try {
+    const res = await fetchWithRetry(
+      "https://api.anthropic.com/v1/messages",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(body),
+      },
+      2,
+      500
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+      const text =
+        data.content?.[0]?.type === "text"
+          ? data.content[0].text
+          : "";
+      return { success: true, data: text };
+    }
+
+    return { success: false, status: res.status, error: data };
+  } catch (err) {
+    return { success: false, error: err };
+  }
+}
+
+// ─── Helper: Call Gemini API ────────────────────────────────────────────────────
+async function callGeminiAPI(
+  apiKey: string,
+  model: string,
+  base64: string,
+  mimeType: string
+): Promise<{ success: boolean; data?: string; status?: number; error?: unknown }> {
+  const resolvedMime =
+    mimeType === "application/pdf" || mimeType.endsWith("/pdf")
+      ? "application/pdf"
+      : "image/jpeg";
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          { inline_data: { mime_type: resolvedMime, data: base64 } },
+          { text: EXTRACTION_PROMPT },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 4096,
+      responseMimeType: "application/json",
+      responseSchema: RESPONSE_SCHEMA,
+    },
+  };
+
+  try {
+    const res = await fetchWithRetry(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      },
+      2,
+      500
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+      const text =
+        data.candidates?.[0]?.content?.parts
+          ?.map((p: { text?: string }) => p.text ?? "")
+          .join("") ?? "";
+      return { success: true, data: text };
+    }
+
+    return { success: false, status: res.status, error: data };
+  } catch (err) {
+    return { success: false, error: err };
+  }
 }
 
 // ─── Gemini responseSchema — types MUST be uppercase (Gemini API requirement) ─
@@ -184,16 +341,6 @@ export async function POST(req: NextRequest) {
     return authResult;
   }
 
-  const { apiKeys, models } = getApiKeysAndModels();
-
-  if (apiKeys.length === 0 || !apiKeys[0]) {
-    return NextResponse.json({ error: "API Keys not configured" }, { status: 500 });
-  }
-
-  if (models.length === 0) {
-    return NextResponse.json({ error: "Models not configured" }, { status: 500 });
-  }
-
   let body: { base64: string; mimeType: string };
   try {
     body = await req.json();
@@ -206,133 +353,123 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing base64 or mimeType" }, { status: 400 });
   }
 
-  // Resolve correct MIME type for PDFs vs images
-  const resolvedMime =
-    mimeType === "application/pdf" || mimeType.endsWith("/pdf")
-      ? "application/pdf"
-      : mimeType.startsWith("image/")
-      ? mimeType
-      : "application/pdf";
-
   try {
-    // Create all combinations of (apiKey, model) pairs to try
-    const combinations: Array<{ apiKey: string; model: string }> = [];
-    for (const apiKey of apiKeys) {
-      for (const model of models) {
-        combinations.push({ apiKey, model });
+    const claudeConfig = getClaudeConfig();
+    const geminiConfig = getGeminiConfig();
+
+    // ─── TRY CLAUDE FIRST (PRIMARY) ────────────────────────────────────────────
+    if (claudeConfig.apiKeys.length > 0 && claudeConfig.apiKeys[0]) {
+      console.log("Attempting Claude API (primary)...");
+      
+      for (const apiKey of claudeConfig.apiKeys) {
+        for (const model of claudeConfig.models) {
+          console.log(`Trying Claude: ${model} (key: ${apiKey.slice(0, 8)}...)`);
+          
+          const result = await callClaudeAPI(apiKey, model, base64, mimeType);
+
+          if (result.success && result.data) {
+            let parsed: ParsedLabel;
+            try {
+              parsed = JSON.parse(result.data);
+            } catch {
+              const clean = result.data
+                .replace(/^```json\s*/i, "")
+                .replace(/```\s*$/i, "")
+                .trim();
+              parsed = JSON.parse(clean);
+            }
+            console.log("Claude API succeeded");
+            return NextResponse.json(parsed);
+          }
+
+          const statusCode = result.status || 500;
+          const error = result.error as ClaudeErrorResponse | undefined;
+
+          // If busy, try next combination
+          if (statusCode === 429 || statusCode === 503) {
+            console.warn(
+              `Claude busy (${statusCode}): ${error?.error?.message || "Unknown error"}`
+            );
+            continue;
+          }
+
+          // Auth/config error, skip Claude and try Gemini
+          if (statusCode === 401 || statusCode === 403 || statusCode === 404) {
+            console.warn(
+              `Claude config error (${statusCode}): ${error?.error?.message || "Invalid key/model"}`
+            );
+            break;
+          }
+
+          // Other error, try next
+          console.warn(`Claude error (${statusCode}): ${error?.error?.message || "Unknown"}`);
+        }
       }
+      console.log("All Claude combinations exhausted, falling back to Gemini...");
     }
 
-    const requestBody = {
-      contents: [
-        {
-          parts: [
-            { inline_data: { mime_type: resolvedMime, data: base64 } },
-            { text: EXTRACTION_PROMPT },
-          ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 4096,
-        responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
-      },
-    };
-
-    let lastError: { status: number; error: unknown } | null = null;
-
-    // Try each combination of API key and model
-    for (const { apiKey, model } of combinations) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-      const geminiRes = await fetchWithRetry(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-
-      const geminiData = await geminiRes.json();
-
-      if (geminiRes.ok) {
-        // Success! Extract and return the response
-        const geminiJson = geminiData as GeminiGenerateContentResponse;
-
-        const rawText: string =
-          geminiJson.candidates?.[0]?.content?.parts
-            ?.map((p: { text?: string }) => p.text ?? "")
-            .join("") ?? "";
-
-        if (!rawText) {
-          const reason = geminiJson.candidates?.[0]?.finishReason;
-          throw new Error(`Empty response from Gemini. Finish reason: ${reason ?? "unknown"}`);
-        }
-
-        // With responseSchema + responseMimeType="application/json", rawText is already valid JSON
-        let parsed: ParsedLabel;
-        try {
-          parsed = JSON.parse(rawText);
-        } catch {
-          // Fallback: strip any accidental markdown fences
-          const clean = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-          parsed = JSON.parse(clean);
-        }
-
-        return NextResponse.json(parsed);
-      }
-
-      const errorBody = geminiData as GeminiErrorBody;
-      const statusCode = geminiRes.status;
-
-      console.warn(
-        `Gemini API error (${model}, key: ${apiKey.slice(0, 8)}..., status ${statusCode}): ${
-          errorBody.error?.message || "Unknown error"
-        }`
+    // ─── FALLBACK TO GEMINI ────────────────────────────────────────────────────
+    if (geminiConfig.apiKeys.length === 0 || !geminiConfig.apiKeys[0]) {
+      return NextResponse.json(
+        { error: "Claude exhausted and no Gemini API key configured" },
+        { status: 503 }
       );
-
-      // If this fails due to being busy (503/429), try the next combination
-      if (statusCode === 503 || statusCode === 429) {
-        lastError = { status: statusCode, error: errorBody };
-        continue;
-      }
-
-      // For other errors (404, 400, auth errors), stop and return error
-      if (statusCode === 404 || statusCode === 401 || statusCode === 403) {
-        console.error("Gemini API configuration error:", {
-          model,
-          status: statusCode,
-          error: errorBody,
-        });
-        return NextResponse.json(
-          {
-            error: errorBody.error?.message || "Gemini API configuration error",
-            model,
-          },
-          { status: statusCode }
-        );
-      }
-
-      // For other 4xx/5xx errors, record and try next combination
-      lastError = { status: statusCode, error: errorBody };
     }
 
-    // If we get here, all combinations failed
-    console.error("All Gemini API combinations exhausted:", {
-      totalCombinations: combinations.length,
-      lastError,
-    });
+    console.log("Attempting Gemini API (fallback)...");
+    
+    for (const apiKey of geminiConfig.apiKeys) {
+      for (const model of geminiConfig.models) {
+        console.log(`Trying Gemini: ${model} (key: ${apiKey.slice(0, 8)}...)`);
+        
+        const result = await callGeminiAPI(apiKey, model, base64, mimeType);
 
-    const statusCode = lastError?.status ?? 503;
-    const errorBody = lastError?.error as GeminiErrorBody | undefined;
+        if (result.success && result.data) {
+          let parsed: ParsedLabel;
+          try {
+            parsed = JSON.parse(result.data);
+          } catch {
+            const clean = result.data
+              .replace(/^```json\s*/i, "")
+              .replace(/```\s*$/i, "")
+              .trim();
+            parsed = JSON.parse(clean);
+          }
+          console.log("Gemini API succeeded");
+          return NextResponse.json(parsed);
+        }
 
+        const statusCode = result.status || 500;
+        const error = result.error as GeminiErrorBody | undefined;
+
+        if (statusCode === 429 || statusCode === 503) {
+          console.warn(
+            `Gemini busy (${statusCode}): ${error?.error?.message || "Unknown error"}`
+          );
+          continue;
+        }
+
+        if (statusCode === 401 || statusCode === 403 || statusCode === 404) {
+          console.error(`Gemini config error (${statusCode}):`, error);
+          continue;
+        }
+
+        console.warn(`Gemini error (${statusCode}):`, error);
+      }
+    }
+
+    // ─── ALL PROVIDERS EXHAUSTED ────────────────────────────────────────────────
+    console.error("All Claude and Gemini combinations exhausted");
     return NextResponse.json(
       {
         error:
-          errorBody?.error?.message ||
-          "All API keys and models are currently unavailable or over quota. Please try again later.",
-        totalCombinations: combinations.length,
+          "Both Claude and Gemini are currently unavailable or rate limited. Please try again later.",
+        providers: {
+          claude: `${claudeConfig.apiKeys.length} key(s)`,
+          gemini: `${geminiConfig.apiKeys.length} key(s)`,
+        },
       },
-      { status: statusCode }
+      { status: 503 }
     );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
